@@ -1,0 +1,108 @@
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["driverAdapters"]
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  name      String
+  email     String   @unique
+  password  String?
+  role      String   @default("VENDEDOR") // ADMIN | VENDEDOR
+  activo    Boolean  @default(true)
+  ventas    Venta[]
+  createdAt DateTime @default(now())
+}
+
+model Producto {
+  id          String     @id @default(cuid())
+  nombre      String
+  descripcion String?
+  categoria   String?
+  activo      Boolean    @default(true)
+  imagen      String?    // Imagen en Base64 (recortada 1:1)
+  variantes   Variante[]
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+}
+
+model Variante {
+  id         String      @id @default(cuid())
+  productoId String
+  producto   Producto    @relation(fields: [productoId], references: [id], onDelete: Cascade)
+  nombre     String      // ej: "Talla M - Rojo"
+  precio     Float       // precio en Gs.
+  precioUsd  Float       @default(0) // precio en USD
+  stock      Int         @default(0)
+  sku        String?
+  items      VentaItem[]
+  createdAt  DateTime    @default(now())
+}
+
+model Cliente {
+  id        String   @id @default(cuid())
+  nombre    String
+  telefono  String?
+  email     String?
+  notas     String?
+  ventas    Venta[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Venta {
+  id         String      @id @default(cuid())
+  vendedorId String
+  vendedor   User        @relation(fields: [vendedorId], references: [id])
+  clienteId  String?
+  cliente    Cliente?    @relation(fields: [clienteId], references: [id], onDelete: SetNull)
+  items      VentaItem[]
+  notas      String?
+  total      Float
+  estado     String      @default("COMPLETADA") // COMPLETADA | CANCELADA
+  createdAt  DateTime    @default(now())
+}
+
+model VentaItem {
+  id         String   @id @default(cuid())
+  ventaId    String
+  venta      Venta    @relation(fields: [ventaId], references: [id], onDelete: Cascade)
+  varianteId String
+  variante   Variante @relation(fields: [varianteId], references: [id])
+  cantidad   Int
+  precio     Float    // precio al momento de la venta
+}
+
+model PrecioItem {
+  id          String   @id @default(cuid())
+  lista       String   // "PRODUCTOS" | "SERVICIOS"
+  nombre      String
+  precio      Float    @default(0)  // precio de venta
+  moneda      String   @default("PYG") // "PYG" | "USD"
+  cantidad    Float?
+  costoGs     Float?   // costo en guaraníes (solo PRODUCTOS)
+  costoUsd    Float?   // costo en USD (solo PRODUCTOS)
+  lugar       String?  // lugar de compra (solo PRODUCTOS)
+  agotado     Boolean  @default(false)
+  pendiente   String?  // pendientes (solo SERVICIOS)
+  orden       Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model CalendarToken {
+  id           String    @id @default(cuid())
+  userId       String    @unique
+  accessToken  String
+  refreshToken String?
+  expiresAt    DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+}
+
+
