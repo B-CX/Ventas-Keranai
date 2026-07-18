@@ -15,3 +15,11 @@ This version has breaking changes — APIs, conventions, and file structure may 
 - The primary workspace is inside a Google Drive folder (`g:\Mi unidad\...`). 
 - Running `npm install` or `npm run dev` directly in Google Drive is extremely slow and causes file locks. 
 - **Start command**: Always suggest or use `INICIAR.bat` to run the project. It copies the code to a local SSD (`C:\Users\bcand\ventas-app\ventas-interno`) and runs the server from there.
+
+## Flujo de Trabajo: Actualizar y Respaldar
+- Cuando el usuario solicite "Actualizar", "Guardar todo" o sincronizar el proyecto, debes seguir estrictamente este flujo:
+  1. Hacer commit de todos los cambios locales en `C:\Users\bcand\ventas-app\ventas-interno`.
+  2. Subirlos a GitHub (`git push origin main`).
+  3. Copiar el estado actual a Google Drive ejecutando exactamente este comando en PowerShell:
+     `robocopy "C:\Users\bcand\ventas-app\ventas-interno" "G:\Mi unidad\antigravity app proyecto\ventas-interno" /MIR /XD node_modules .next .git`
+  4. Esto asegura que la próxima vez que el usuario ejecute `INICIAR.bat`, no se sobrescriban los cambios más recientes con versiones viejas.
