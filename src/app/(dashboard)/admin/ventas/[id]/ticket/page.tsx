@@ -98,7 +98,6 @@ export default async function TicketPage({ params }: { params: { id: string } })
       {/* Print Button (Hidden in Print Mode) */}
       <div className="fixed bottom-8 right-8 print:hidden">
         <button 
-          onClick="window.print()" 
           className="bg-black text-white px-6 py-3 rounded-full shadow-2xl font-bold hover:scale-105 transition"
           dangerouslySetInnerHTML={{ __html: 'Imprimir Ticket' }}
         />
