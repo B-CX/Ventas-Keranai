@@ -63,7 +63,7 @@ export async function POST(req: Request) {
   }
 
   try {
-    const { clienteId, items, notas } = await req.json();
+    const { clienteId, items, notas, metodoPago, monedaCobro, cotizacionUsd } = await req.json();
     const vendedorId = (session.user as any).id;
 
     if (!items || !Array.isArray(items) || items.length === 0) {
@@ -118,13 +118,22 @@ export async function POST(req: Request) {
         });
       }
 
+      // Buscar caja activa
+      const cajaActiva = await tx.cajaSession.findFirst({
+        where: { usuarioId: vendedorId, estado: 'ABIERTA' }
+      });
+
       // Registrar venta
       const venta = await tx.venta.create({
         data: {
           vendedorId,
           clienteId: clienteId || null,
+          cajaId: cajaActiva ? cajaActiva.id : null,
           notas,
           total,
+          metodoPago: metodoPago || 'EFECTIVO',
+          monedaCobro: monedaCobro || 'PYG',
+          cotizacionUsd: cotizacionUsd || null,
           estado: 'COMPLETADA',
           items: {
             create: createdItems,

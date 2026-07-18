@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useSession } from 'next-auth/react';
 import { 
   Plus, 
   Search, 
@@ -9,6 +10,7 @@ import {
   FileText, 
   History,
   Edit2,
+  Trash2,
   X,
   ShoppingBag,
   Calendar,
@@ -52,6 +54,9 @@ interface ClienteDetalle extends Cliente {
 }
 
 export default function ClientesCRM() {
+  const { data: session } = useSession();
+  const isAdmin = (session?.user as any)?.role === 'ADMIN';
+
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -171,6 +176,24 @@ export default function ClientesCRM() {
     }
   };
 
+  const handleDelete = async (id: string, nombre: string) => {
+    if (!isAdmin) return;
+    if (!confirm(`⚠️ Atención: Estás por quitar al cliente "${nombre}".\n\nSus ventas registradas se mantendrán en el sistema, pero ya no tendrán este cliente asociado (quedarán como ventas anónimas).\n\n¿Estás seguro de continuar?`)) return;
+    
+    try {
+      const res = await fetch(`/api/clientes/${id}`, { method: 'DELETE' });
+      if (res.ok) {
+        fetchClientes();
+      } else {
+        const data = await res.json();
+        alert(data.error || 'Error al eliminar cliente');
+      }
+    } catch (error) {
+      console.error(error);
+      alert('Error de red al eliminar el cliente');
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Controles de Búsqueda y Crear */}
@@ -230,6 +253,15 @@ export default function ClientesCRM() {
                     >
                       <History className="h-4 w-4" />
                     </button>
+                    {isAdmin && (
+                      <button
+                        onClick={() => handleDelete(cliente.id, cliente.nombre)}
+                        className="rounded-lg p-1.5 text-zinc-400 hover:bg-red-500/10 hover:text-red-400 transition"
+                        title="Eliminar Cliente"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    )}
                   </div>
                 </div>
 

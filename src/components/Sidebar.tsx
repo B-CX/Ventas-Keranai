@@ -15,6 +15,9 @@ import {
   TrendingUp,
   FileSpreadsheet,
   CalendarDays,
+  Wallet,
+  Calculator,
+  Settings,
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -37,13 +40,17 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
     { name: 'Lista de Precios', href: '/admin/precios', icon: FileSpreadsheet },
     { name: 'Calendario', href: '/admin/calendario', icon: CalendarDays },
     { name: 'Nueva Venta', href: '/venta', icon: ShoppingBag },
+    { name: 'Caja', href: '/admin/caja', icon: Wallet },
+    { name: 'Finanzas', href: '/admin/finanzas', icon: Calculator },
     { name: 'Usuarios', href: '/admin/usuarios', icon: UserCog },
+    { name: 'Configuraciones', href: '/admin/configuracion', icon: Settings },
   ];
 
   const sellerLinks = [
     { name: 'Nueva Venta', href: '/venta', icon: ShoppingBag },
     { name: 'Consultar Stock', href: '/admin/productos', icon: Package },
     { name: 'Clientes', href: '/admin/clientes', icon: Users },
+    { name: 'Calendario', href: '/admin/calendario', icon: CalendarDays },
   ];
 
   const links = role === 'ADMIN' ? adminLinks : sellerLinks;

@@ -25,11 +25,22 @@ interface Variante {
   sku?: string | null;
 }
 
+interface Grupo {
+  id: string;
+  nombre: string;
+}
+
+interface Categoria {
+  id: string;
+  nombre: string;
+  grupoId: string;
+}
+
 interface Producto {
   id: string;
   nombre: string;
   descripcion: string | null;
-  categoria: string | null;
+  categoria: { id: string, nombre: string, grupo: { id: string, nombre: string } } | null;
   activo: boolean;
   variantes: Variante[];
 }
@@ -58,12 +69,42 @@ export default function NuevaVentaPage() {
   const [productsFound, setProductsFound] = useState<Producto[]>([]);
   const [searchingProducts, setSearchingProducts] = useState(false);
 
+  // Filtros de Catálogo
+  const [grupos, setGrupos] = useState<Grupo[]>([]);
+  const [categorias, setCategorias] = useState<Categoria[]>([]);
+  const [selectedGrupoId, setSelectedGrupoId] = useState('');
+  const [selectedCategoriaId, setSelectedCategoriaId] = useState('');
+  const [sortOrder, setSortOrder] = useState('newest');
+
+  // Persistencia de filtros
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const savedGrupo = localStorage.getItem('pos_venta_filterGrupoId');
+      const savedCategoria = localStorage.getItem('pos_venta_filterCategoriaId');
+      const savedSort = localStorage.getItem('pos_venta_sortOrder');
+      if (savedGrupo) setSelectedGrupoId(savedGrupo);
+      if (savedCategoria) setSelectedCategoriaId(savedCategoria);
+      if (savedSort) setSortOrder(savedSort);
+    }
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem('pos_venta_filterGrupoId', selectedGrupoId);
+    localStorage.setItem('pos_venta_filterCategoriaId', selectedCategoriaId);
+    localStorage.setItem('pos_venta_sortOrder', sortOrder);
+  }, [selectedGrupoId, selectedCategoriaId, sortOrder]);
+
   // Selector de Variante
   const [selectedProductForVariant, setSelectedProductForVariant] = useState<Producto | null>(null);
   
   // Carrito
   const [cart, setCart] = useState<CartItem[]>([]);
   const [notas, setNotas] = useState('');
+  const [metodoPago, setMetodoPago] = useState('EFECTIVO');
+  
+  // Multi-moneda
+  const [cotizacionUsd, setCotizacionUsd] = useState<number>(7500);
+  const [monedaCobro, setMonedaCobro] = useState('PYG');
 
   // Clientes
   const [clientSearch, setClientSearch] = useState('');
@@ -86,9 +127,26 @@ export default function NuevaVentaPage() {
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [lastVentaId, setLastVentaId] = useState('');
 
+  // Cargar Grupos y Categorías
+  useEffect(() => {
+    const fetchCatalog = async () => {
+      try {
+        const [resG, resC] = await Promise.all([
+          fetch('/api/productos/grupos'),
+          fetch('/api/productos/categorias')
+        ]);
+        if (resG.ok) setGrupos(await resG.json());
+        if (resC.ok) setCategorias(await resC.json());
+      } catch (err) {
+        console.error(err);
+      }
+    };
+    fetchCatalog();
+  }, []);
+
   // Buscar Productos en API
   useEffect(() => {
-    if (productSearch.trim().length === 0) {
+    if (productSearch.trim().length === 0 && !selectedCategoriaId && !selectedGrupoId) {
       setProductsFound([]);
       return;
     }
@@ -96,11 +154,22 @@ export default function NuevaVentaPage() {
     const delayDebounce = setTimeout(async () => {
       setSearchingProducts(true);
       try {
-        const res = await fetch(`/api/productos?q=${encodeURIComponent(productSearch)}`);
+        let url = `/api/productos?q=${encodeURIComponent(productSearch)}`;
+        if (selectedCategoriaId) {
+          url += `&categoriaId=${selectedCategoriaId}`;
+        }
+        
+        const res = await fetch(url);
         const data = await res.json();
         if (res.ok) {
-          // Filtrar productos con variantes disponibles
-          setProductsFound(data.filter((p: Producto) => p.activo && p.variantes.length > 0));
+          let filtrados = data.filter((p: Producto) => p.activo && p.variantes.length > 0);
+          
+          // Si hay grupo pero no categoría, filtramos en el cliente (opcional)
+          if (selectedGrupoId && !selectedCategoriaId) {
+            filtrados = filtrados.filter((p: Producto) => p.categoria?.grupo?.id === selectedGrupoId);
+          }
+          
+          setProductsFound(filtrados);
         }
       } catch (err) {
         console.error(err);
@@ -110,7 +179,25 @@ export default function NuevaVentaPage() {
     }, 200);
 
     return () => clearTimeout(delayDebounce);
-  }, [productSearch]);
+  }, [productSearch, selectedCategoriaId, selectedGrupoId]);
+
+  // Cargar Cotización USD
+  useEffect(() => {
+    const fetchConfig = async () => {
+      try {
+        const res = await fetch('/api/configuracion');
+        if (res.ok) {
+          const data = await res.json();
+          if (data.cotizacionUsd) {
+            setCotizacionUsd(data.cotizacionUsd);
+          }
+        }
+      } catch (err) {
+        console.error(err);
+      }
+    };
+    fetchConfig();
+  }, []);
 
   // Buscar Clientes en API
   useEffect(() => {
@@ -249,6 +336,9 @@ export default function NuevaVentaPage() {
     const payload = {
       clienteId: selectedCliente?.id || null,
       notas: notas || null,
+      metodoPago,
+      monedaCobro,
+      cotizacionUsd: monedaCobro === 'USD' ? cotizacionUsd : null,
       items: cart.map((item) => ({
         varianteId: item.varianteId,
         cantidad: item.cantidad,
@@ -270,6 +360,8 @@ export default function NuevaVentaPage() {
         // Limpiar estado
         setCart([]);
         setNotas('');
+        setMetodoPago('EFECTIVO');
+        setMonedaCobro('PYG');
         setSelectedCliente(null);
         setClientSearch('');
       } else {
@@ -307,6 +399,42 @@ export default function NuevaVentaPage() {
             />
           </div>
 
+          <div className="flex gap-2 flex-wrap">
+            <select
+              value={selectedGrupoId}
+              onChange={(e) => {
+                setSelectedGrupoId(e.target.value);
+                setSelectedCategoriaId(''); // Reset category when group changes
+              }}
+              className="flex-1 rounded-xl border border-white/10 bg-white/[0.04] px-4 py-2.5 text-xs text-white outline-none focus:border-violet-500 transition"
+            >
+              <option value="">Todos los Grupos</option>
+              {grupos.map(g => <option key={g.id} value={g.id}>{g.nombre}</option>)}
+            </select>
+
+            <select
+              value={selectedCategoriaId}
+              onChange={(e) => setSelectedCategoriaId(e.target.value)}
+              disabled={!selectedGrupoId && categorias.length > 0 === false}
+              className="flex-1 rounded-xl border border-white/10 bg-white/[0.04] px-4 py-2.5 text-xs text-white outline-none focus:border-violet-500 transition disabled:opacity-50"
+            >
+              <option value="">Todas las Categorías</option>
+              {categorias
+                .filter(c => !selectedGrupoId || c.grupoId === selectedGrupoId)
+                .map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
+            </select>
+
+            <select
+              value={sortOrder}
+              onChange={(e) => setSortOrder(e.target.value)}
+              className="flex-1 rounded-xl border border-white/10 bg-white/[0.04] px-4 py-2.5 text-xs text-white outline-none focus:border-violet-500 transition"
+            >
+              <option value="newest">Más Nuevos</option>
+              <option value="name-asc">Orden Alfabético</option>
+              <option value="price-desc">Mayor Precio</option>
+            </select>
+          </div>
+
           {/* Resultados de búsqueda de productos */}
           {searchingProducts && (
             <div className="py-2 text-center text-xs text-zinc-500">Buscando productos...</div>
@@ -314,7 +442,15 @@ export default function NuevaVentaPage() {
 
           {productsFound.length > 0 && (
             <div className="divide-y divide-white/5 rounded-xl border border-white/10 bg-[#0c0c14] overflow-hidden max-h-[300px] overflow-y-auto">
-              {productsFound.map((producto) => (
+              {[...productsFound].sort((a, b) => {
+                if (sortOrder === 'name-asc') return a.nombre.localeCompare(b.nombre);
+                if (sortOrder === 'price-desc') {
+                  const maxA = Math.max(...a.variantes.map(v => v.precio), 0);
+                  const maxB = Math.max(...b.variantes.map(v => v.precio), 0);
+                  return maxB - maxA;
+                }
+                return 0;
+              }).map((producto) => (
                 <div
                   key={producto.id}
                   onClick={() => setSelectedProductForVariant(producto)}
@@ -322,7 +458,9 @@ export default function NuevaVentaPage() {
                 >
                   <div>
                     <p className="font-semibold text-white">{producto.nombre}</p>
-                    <p className="text-xs text-zinc-400 mt-0.5">{producto.categoria || 'Sin Categoría'}</p>
+                    <p className="text-xs text-zinc-400 mt-0.5">
+                      {producto.categoria ? `${producto.categoria.grupo.nombre} > ${producto.categoria.nombre}` : 'Sin Categoría'}
+                    </p>
                   </div>
                   <ChevronRight className="h-4 w-4 text-zinc-500" />
                 </div>
@@ -509,6 +647,33 @@ export default function NuevaVentaPage() {
               )}
             </div>
 
+            {/* Método y Moneda de Pago */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-semibold uppercase tracking-wider text-zinc-400">Método de Pago</label>
+                <select
+                  value={metodoPago}
+                  onChange={(e) => setMetodoPago(e.target.value)}
+                  className="mt-2 w-full rounded-xl border border-white/10 bg-[#0c0c14] px-4 py-2.5 text-sm text-white outline-none transition focus:border-violet-500"
+                >
+                  <option value="EFECTIVO">💵 Efectivo</option>
+                  <option value="TARJETA">💳 Tarjeta (Débito/Crédito)</option>
+                  <option value="TRANSFERENCIA">🏦 Transferencia Bancaria</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold uppercase tracking-wider text-zinc-400">Moneda de Cobro</label>
+                <select
+                  value={monedaCobro}
+                  onChange={(e) => setMonedaCobro(e.target.value)}
+                  className="mt-2 w-full rounded-xl border border-white/10 bg-[#0c0c14] px-4 py-2.5 text-sm text-white outline-none transition focus:border-violet-500"
+                >
+                  <option value="PYG">🇵🇾 Guaraníes (PYG)</option>
+                  <option value="USD">🇺🇸 Dólares (USD)</option>
+                </select>
+              </div>
+            </div>
+
             {/* Notas */}
             <div>
               <label className="block text-xs font-semibold uppercase tracking-wider text-zinc-400">Notas de Venta</label>
@@ -530,9 +695,23 @@ export default function NuevaVentaPage() {
 
             {/* Total y Botón de Confirmación */}
             <div className="border-t border-white/5 pt-4 space-y-4">
-              <div className="flex items-center justify-between">
-                <span className="text-xs text-zinc-400 font-semibold uppercase">Total a Pagar</span>
-                <span className="text-2xl font-bold text-violet-400">₲ {Math.round(totalVenta).toLocaleString('es-PY')}</span>
+              <div className="flex flex-col gap-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-zinc-400 font-semibold uppercase">Total a Pagar (Base)</span>
+                  <span className="text-xl font-bold text-zinc-300">₲ {Math.round(totalVenta).toLocaleString('es-PY')}</span>
+                </div>
+                
+                {monedaCobro === 'USD' && (
+                  <div className="flex items-center justify-between bg-emerald-500/10 border border-emerald-500/20 p-3 rounded-xl mt-2">
+                    <div>
+                      <span className="text-xs text-emerald-400 font-semibold uppercase block">Total en Dólares</span>
+                      <span className="text-[10px] text-emerald-500">Cotización: ₲ {cotizacionUsd.toLocaleString('es-PY')}</span>
+                    </div>
+                    <span className="text-2xl font-bold text-emerald-400">
+                      $ {(totalVenta / cotizacionUsd).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </span>
+                  </div>
+                )}
               </div>
 
               <button
@@ -664,12 +843,21 @@ export default function NuevaVentaPage() {
               </p>
             </div>
 
-            <button
-              onClick={() => setShowSuccessModal(false)}
-              className="w-full rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 py-2.5 text-sm font-semibold text-white shadow-lg hover:from-violet-500 hover:to-indigo-500 transition active:scale-[0.98]"
-            >
-              Entendido
-            </button>
+            <div className="flex flex-col gap-3">
+              <a
+                href={`/admin/ventas/${lastVentaId}/ticket`}
+                target="_blank"
+                className="w-full text-center rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 py-2.5 text-sm font-semibold text-white shadow-lg hover:from-violet-500 hover:to-indigo-500 transition active:scale-[0.98]"
+              >
+                🖨️ Imprimir Ticket
+              </a>
+              <button
+                onClick={() => setShowSuccessModal(false)}
+                className="w-full rounded-xl bg-white/5 border border-white/10 py-2.5 text-sm font-semibold text-white hover:bg-white/10 transition active:scale-[0.98]"
+              >
+                Nueva Venta
+              </button>
+            </div>
           </div>
         </div>
       )}

@@ -79,3 +79,26 @@ export async function PUT(
     return NextResponse.json({ error: 'Error al actualizar el cliente' }, { status: 500 });
   }
 }
+
+export async function DELETE(
+  req: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const session = await auth();
+  if (!session || (session.user as any)?.role !== 'ADMIN') {
+    return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
+  }
+
+  try {
+    const { id } = await params;
+    
+    await db.cliente.delete({
+      where: { id },
+    });
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error(error);
+    return NextResponse.json({ error: 'Error al eliminar el cliente' }, { status: 500 });
+  }
+}

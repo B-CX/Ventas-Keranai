@@ -11,7 +11,7 @@ export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
     const search = searchParams.get('q') || '';
-    const category = searchParams.get('categoria') || '';
+    const categoryId = searchParams.get('categoriaId') || '';
 
     const whereClause: any = {};
 
@@ -23,8 +23,8 @@ export async function GET(req: Request) {
       ];
     }
 
-    if (category) {
-      whereClause.categoria = category;
+    if (categoryId) {
+      whereClause.categoriaId = categoryId;
     }
 
     // Si es Vendedor, solo ver productos activos
@@ -37,6 +37,7 @@ export async function GET(req: Request) {
       where: whereClause,
       include: {
         variantes: true,
+        categoria: { include: { grupo: true } }
       },
       orderBy: { createdAt: 'desc' },
     });
@@ -55,7 +56,7 @@ export async function POST(req: Request) {
   }
 
   try {
-    const { nombre, descripcion, categoria, imagen, variantes } = await req.json();
+    const { nombre, descripcion, categoriaId, imagen, variantes } = await req.json();
 
     if (!nombre) {
       return NextResponse.json({ error: 'El nombre es obligatorio' }, { status: 400 });
@@ -65,7 +66,7 @@ export async function POST(req: Request) {
       data: {
         nombre,
         descripcion,
-        categoria,
+        categoriaId: categoriaId || null,
         imagen: imagen || null,
         variantes: {
           create: (variantes || []).map((v: any) => ({

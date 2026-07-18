@@ -29,7 +29,10 @@ export default auth((req) => {
 
   const userRole = (req.auth?.user as any)?.role;
   if (userRole === 'VENDEDOR' && nextUrl.pathname.startsWith('/admin')) {
-    return NextResponse.redirect(new URL('/venta', nextUrl));
+    const allowedForVendedor = ['/admin/productos', '/admin/clientes', '/admin/calendario'];
+    if (!allowedForVendedor.includes(nextUrl.pathname)) {
+      return NextResponse.redirect(new URL('/venta', nextUrl));
+    }
   }
 
   return NextResponse.next();

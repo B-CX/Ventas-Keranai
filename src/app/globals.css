@@ -131,6 +131,16 @@ html:not(.dark) .divide-white\/10 > :not([hidden]) ~ :not([hidden]) {
   border-color: rgba(9, 9, 11, 0.08) !important;
 }
 
+/* Select Option Global Styles */
+select option {
+  background-color: #0c0c14;
+  color: #ffffff;
+}
+html:not(.dark) select option {
+  background-color: #ffffff !important;
+  color: #09090b !important;
+}
+
 /* Re-assert white text color for colored elements/buttons/badges in light mode */
 html:not(.dark) button.text-white,
 html:not(.dark) a.text-white,

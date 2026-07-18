@@ -9,39 +9,66 @@ datasource db {
 }
 
 model User {
-  id        String   @id @default(cuid())
-  name      String
-  email     String   @unique
-  password  String?
-  role      String   @default("VENDEDOR") // ADMIN | VENDEDOR
-  activo    Boolean  @default(true)
-  ventas    Venta[]
-  createdAt DateTime @default(now())
+  id          String        @id @default(cuid())
+  name        String
+  email       String        @unique
+  password    String?
+  role        String        @default("VENDEDOR") // ADMIN | VENDEDOR
+  activo      Boolean       @default(true)
+  ventas      Venta[]
+  createdAt   DateTime      @default(now())
+  CajaSession CajaSession[]
+  Gasto       Gasto[]
+  Compra      Compra[]
 }
 
 model Producto {
   id          String     @id @default(cuid())
   nombre      String
   descripcion String?
-  categoria   String?
+  categoriaId String?
+  categoria   ProductoCategoria? @relation(fields: [categoriaId], references: [id], onDelete: SetNull)
   activo      Boolean    @default(true)
-  imagen      String?    // Imagen en Base64 (recortada 1:1)
+  imagen      String? // Imagen en Base64 (recortada 1:1)
   variantes   Variante[]
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
 }
 
 model Variante {
-  id         String      @id @default(cuid())
+  id         String       @id @default(cuid())
   productoId String
-  producto   Producto    @relation(fields: [productoId], references: [id], onDelete: Cascade)
-  nombre     String      // ej: "Talla M - Rojo"
-  precio     Float       // precio en Gs.
-  precioUsd  Float       @default(0) // precio en USD
-  stock      Int         @default(0)
+  producto   Producto     @relation(fields: [productoId], references: [id], onDelete: Cascade)
+  nombre     String // ej: "Talla M - Rojo"
+  precio     Float // precio en Gs.
+  precioUsd  Float        @default(0) // precio en USD
+  stock      Int          @default(0)
   sku        String?
   items      VentaItem[]
-  createdAt  DateTime    @default(now())
+  createdAt  DateTime     @default(now())
+  CompraItem CompraItem[]
+}
+
+model ProductoGrupo {
+  id          String              @id @default(cuid())
+  nombre      String              @unique
+  descripcion String?
+  categorias  ProductoCategoria[]
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+}
+
+model ProductoCategoria {
+  id          String        @id @default(cuid())
+  grupoId     String
+  grupo       ProductoGrupo @relation(fields: [grupoId], references: [id], onDelete: Cascade)
+  nombre      String
+  descripcion String?
+  productos   Producto[]
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  @@unique([grupoId, nombre]) // No puede haber dos categorías con el mismo nombre en un mismo grupo
 }
 
 model Cliente {
@@ -56,16 +83,21 @@ model Cliente {
 }
 
 model Venta {
-  id         String      @id @default(cuid())
-  vendedorId String
-  vendedor   User        @relation(fields: [vendedorId], references: [id])
-  clienteId  String?
-  cliente    Cliente?    @relation(fields: [clienteId], references: [id], onDelete: SetNull)
-  items      VentaItem[]
-  notas      String?
-  total      Float
-  estado     String      @default("COMPLETADA") // COMPLETADA | CANCELADA
-  createdAt  DateTime    @default(now())
+  id            String       @id @default(cuid())
+  vendedorId    String
+  vendedor      User         @relation(fields: [vendedorId], references: [id])
+  clienteId     String?
+  cliente       Cliente?     @relation(fields: [clienteId], references: [id], onDelete: SetNull)
+  cajaId        String?
+  caja          CajaSession? @relation(fields: [cajaId], references: [id], onDelete: SetNull)
+  items         VentaItem[]
+  notas         String?
+  total         Float
+  metodoPago    String       @default("EFECTIVO") // EFECTIVO | TARJETA | TRANSFERENCIA
+  monedaCobro   String       @default("PYG") // "PYG" o "USD"
+  cotizacionUsd Float? // Cotización del dólar al momento de la venta
+  estado        String       @default("COMPLETADA") // COMPLETADA | CANCELADA
+  createdAt     DateTime     @default(now())
 }
 
 model VentaItem {
@@ -75,24 +107,24 @@ model VentaItem {
   varianteId String
   variante   Variante @relation(fields: [varianteId], references: [id])
   cantidad   Int
-  precio     Float    // precio al momento de la venta
+  precio     Float // precio al momento de la venta
 }
 
 model PrecioItem {
-  id          String   @id @default(cuid())
-  lista       String   // "PRODUCTOS" | "SERVICIOS"
-  nombre      String
-  precio      Float    @default(0)  // precio de venta
-  moneda      String   @default("PYG") // "PYG" | "USD"
-  cantidad    Float?
-  costoGs     Float?   // costo en guaraníes (solo PRODUCTOS)
-  costoUsd    Float?   // costo en USD (solo PRODUCTOS)
-  lugar       String?  // lugar de compra (solo PRODUCTOS)
-  agotado     Boolean  @default(false)
-  pendiente   String?  // pendientes (solo SERVICIOS)
-  orden       Int      @default(0)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id        String   @id @default(cuid())
+  lista     String // "PRODUCTOS" | "SERVICIOS"
+  nombre    String
+  precio    Float    @default(0) // precio de venta
+  moneda    String   @default("PYG") // "PYG" | "USD"
+  cantidad  Float?
+  costoGs   Float? // costo en guaraníes (solo PRODUCTOS)
+  costoUsd  Float? // costo en USD (solo PRODUCTOS)
+  lugar     String? // lugar de compra (solo PRODUCTOS)
+  agotado   Boolean  @default(false)
+  pendiente String? // pendientes (solo SERVICIOS)
+  orden     Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model CalendarToken {
@@ -105,4 +137,85 @@ model CalendarToken {
   updatedAt    DateTime  @updatedAt
 }
 
+model CajaSession {
+  id            String           @id @default(cuid())
+  usuarioId     String
+  usuario       User             @relation(fields: [usuarioId], references: [id])
+  saldoInicial    Float
+  saldoInicialUsd Float            @default(0)
+  saldoFinal      Float? // Se llena al cerrar
+  saldoFinalUsd   Float?
+  diferencia      Float? // Sobrante o Faltante
+  diferenciaUsd   Float?
+  estado        String           @default("ABIERTA") // ABIERTA | CERRADA
+  fechaApertura DateTime         @default(now())
+  fechaCierre   DateTime?
+  notas         String?
+  ventas        Venta[]
+  gastos        Gasto[]
+  compras       Compra[]
+  movimientos   CajaMovimiento[]
+}
 
+model CajaMovimiento {
+  id          String      @id @default(cuid())
+  cajaId      String
+  caja        CajaSession @relation(fields: [cajaId], references: [id], onDelete: Cascade)
+  tipo        String // INGRESO | EGRESO
+  moneda      String      @default("PYG") // PYG | USD
+  monto       Float
+  descripcion String
+  createdAt   DateTime    @default(now())
+}
+
+model GastoCategoria {
+  id          String   @id @default(cuid())
+  nombre      String   @unique
+  descripcion String?
+  gastos      Gasto[]
+  createdAt   DateTime @default(now())
+}
+
+model Gasto {
+  id          String         @id @default(cuid())
+  categoriaId String
+  categoria   GastoCategoria @relation(fields: [categoriaId], references: [id])
+  cajaId      String?
+  caja        CajaSession?   @relation(fields: [cajaId], references: [id], onDelete: SetNull)
+  usuarioId   String
+  usuario     User           @relation(fields: [usuarioId], references: [id])
+  moneda      String         @default("PYG") // PYG | USD
+  monto       Float
+  descripcion String
+  fecha       DateTime       @default(now())
+}
+
+model Compra {
+  id        String       @id @default(cuid())
+  usuarioId String
+  usuario   User         @relation(fields: [usuarioId], references: [id])
+  cajaId    String?
+  caja      CajaSession? @relation(fields: [cajaId], references: [id], onDelete: SetNull)
+  proveedor String?
+  moneda    String       @default("PYG") // PYG | USD
+  total     Float
+  items     CompraItem[]
+  notas     String?
+  fecha     DateTime     @default(now())
+}
+
+model CompraItem {
+  id         String   @id @default(cuid())
+  compraId   String
+  compra     Compra   @relation(fields: [compraId], references: [id], onDelete: Cascade)
+  varianteId String
+  variante   Variante @relation(fields: [varianteId], references: [id])
+  cantidad   Int
+  costoUnit  Float // Costo al que se compró
+}
+
+model Configuracion {
+  id            String   @id @default("GLOBAL") // Solo habrá un registro
+  cotizacionUsd Float    @default(7500)
+  updatedAt     DateTime @updatedAt
+}

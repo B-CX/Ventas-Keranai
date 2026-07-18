@@ -45,6 +45,9 @@ const MESES = [
 
 export default function CalendarioPage() {
   const { data: session } = useSession();
+  const role = (session?.user as any)?.role;
+  const isAdmin = role === 'ADMIN';
+
   const [currentDate, setCurrentDate] = useState(new Date());
   const [eventos, setEventos] = useState<Evento[]>([]);
   const [loading, setLoading] = useState(true);
@@ -441,8 +444,8 @@ export default function CalendarioPage() {
               return (
                 <div
                   key={idx}
-                  onClick={() => handleOpenCreate(cell.date)}
-                  className={`min-h-[100px] border-r border-b border-zinc-100 dark:border-white/5 p-2 transition hover:bg-zinc-50/50 dark:hover:bg-white/[0.01] cursor-pointer flex flex-col gap-1 relative ${
+                  onClick={() => isAdmin && handleOpenCreate(cell.date)}
+                  className={`min-h-[100px] border-r border-b border-zinc-100 dark:border-white/5 p-2 transition hover:bg-zinc-50/50 dark:hover:bg-white/[0.01] ${isAdmin ? 'cursor-pointer' : ''} flex flex-col gap-1 relative ${
                     cell.isCurrentMonth ? 'text-zinc-800 dark:text-white' : 'text-zinc-400 dark:text-zinc-600'
                   }`}
                 >
@@ -491,7 +494,7 @@ export default function CalendarioPage() {
               <div className="flex items-center gap-2">
                 <CalendarDays className="h-5 w-5 text-violet-400" />
                 <h3 className="text-lg font-semibold text-white">
-                  {isEditing ? 'Editar Evento' : 'Nuevo Evento'}
+                  {isEditing ? (isAdmin ? 'Editar Evento' : 'Detalles del Evento') : 'Nuevo Evento'}
                 </h3>
               </div>
               <button
@@ -512,7 +515,8 @@ export default function CalendarioPage() {
                   placeholder="Ej: Reunión de Diseño con Keranai"
                   value={nombre}
                   onChange={(e) => setNombre(e.target.value)}
-                  className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-2.5 text-sm text-white placeholder-zinc-500 outline-none focus:border-violet-500"
+                  disabled={!isAdmin}
+                  className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-2.5 text-sm text-white placeholder-zinc-500 outline-none focus:border-violet-500 disabled:opacity-70"
                 />
               </div>
 
@@ -524,7 +528,8 @@ export default function CalendarioPage() {
                     type="date"
                     value={startDate}
                     onChange={(e) => setStartDate(e.target.value)}
-                    className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-2 text-sm text-white outline-none focus:border-violet-500"
+                    disabled={!isAdmin}
+                    className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-2 text-sm text-white outline-none focus:border-violet-500 disabled:opacity-70"
                   />
                 </div>
                 {!todoElDia && (
@@ -534,7 +539,8 @@ export default function CalendarioPage() {
                       type="time"
                       value={startTime}
                       onChange={(e) => setStartTime(e.target.value)}
-                      className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-2 text-sm text-white outline-none focus:border-violet-500"
+                      disabled={!isAdmin}
+                      className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-2 text-sm text-white outline-none focus:border-violet-500 disabled:opacity-70"
                     />
                   </div>
                 )}
@@ -547,7 +553,8 @@ export default function CalendarioPage() {
                     type="date"
                     value={endDate}
                     onChange={(e) => setEndDate(e.target.value)}
-                    className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-2 text-sm text-white outline-none focus:border-violet-500"
+                    disabled={!isAdmin}
+                    className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-2 text-sm text-white outline-none focus:border-violet-500 disabled:opacity-70"
                   />
                 </div>
                 {!todoElDia && (
@@ -557,7 +564,8 @@ export default function CalendarioPage() {
                       type="time"
                       value={endTime}
                       onChange={(e) => setEndTime(e.target.value)}
-                      className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-2 text-sm text-white outline-none focus:border-violet-500"
+                      disabled={!isAdmin}
+                      className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-2 text-sm text-white outline-none focus:border-violet-500 disabled:opacity-70"
                     />
                   </div>
                 )}
@@ -570,7 +578,8 @@ export default function CalendarioPage() {
                     type="checkbox"
                     checked={todoElDia}
                     onChange={(e) => setTodoElDia(e.target.checked)}
-                    className="rounded border-white/10 bg-white/5 text-violet-500 focus:ring-0 focus:ring-offset-0 h-4 w-4"
+                    disabled={!isAdmin}
+                    className="rounded border-white/10 bg-white/5 text-violet-500 focus:ring-0 focus:ring-offset-0 h-4 w-4 disabled:opacity-50"
                   />
                   Todo el día
                 </label>
@@ -579,7 +588,8 @@ export default function CalendarioPage() {
                     type="checkbox"
                     checked={recordatorio}
                     onChange={(e) => setRecordatorio(e.target.checked)}
-                    className="rounded border-white/10 bg-white/5 text-violet-500 focus:ring-0 focus:ring-offset-0 h-4 w-4"
+                    disabled={!isAdmin}
+                    className="rounded border-white/10 bg-white/5 text-violet-500 focus:ring-0 focus:ring-offset-0 h-4 w-4 disabled:opacity-50"
                   />
                   Recordatorio (30m antes)
                 </label>
@@ -593,10 +603,11 @@ export default function CalendarioPage() {
                     <button
                       key={c.name}
                       type="button"
-                      onClick={() => setColor(c.name)}
+                      disabled={!isAdmin}
+                      onClick={() => isAdmin && setColor(c.name)}
                       className={`h-7 w-7 rounded-full border-2 transition ${c.dot} ${
                         color === c.name ? 'border-white scale-110 shadow-lg shadow-white/10' : 'border-transparent opacity-60 hover:opacity-100'
-                      }`}
+                      } ${!isAdmin ? 'cursor-default opacity-80' : ''}`}
                     />
                   ))}
                 </div>
@@ -610,13 +621,14 @@ export default function CalendarioPage() {
                   rows={3}
                   value={descripcion}
                   onChange={(e) => setDescripcion(e.target.value)}
-                  className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-violet-500 resize-none"
+                  disabled={!isAdmin}
+                  className="w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-2 text-sm text-white placeholder-zinc-500 outline-none focus:border-violet-500 resize-none disabled:opacity-70"
                 />
               </div>
 
               {/* Acciones */}
               <div className="flex items-center justify-between border-t border-white/5 pt-4">
-                {isEditing ? (
+                {isEditing && isAdmin ? (
                   <button
                     type="button"
                     onClick={handleDelete}
@@ -636,16 +648,18 @@ export default function CalendarioPage() {
                     onClick={() => setShowModal(false)}
                     className="rounded-xl border border-white/10 px-4 py-2 text-sm font-semibold text-zinc-400 hover:bg-white/5"
                   >
-                    Cancelar
+                    {isAdmin ? 'Cancelar' : 'Cerrar'}
                   </button>
-                  <button
-                    type="submit"
-                    disabled={saving}
-                    className="flex items-center gap-2 rounded-xl bg-violet-600 px-5 py-2 text-sm font-semibold text-white hover:bg-violet-500 transition disabled:opacity-50"
-                  >
-                    {saving && <Loader2 className="h-4 w-4 animate-spin" />}
-                    {isEditing ? 'Guardar Cambios' : 'Crear Evento'}
-                  </button>
+                  {isAdmin && (
+                    <button
+                      type="submit"
+                      disabled={saving}
+                      className="flex items-center gap-2 rounded-xl bg-violet-600 px-5 py-2 text-sm font-semibold text-white hover:bg-violet-500 transition disabled:opacity-50"
+                    >
+                      {saving && <Loader2 className="h-4 w-4 animate-spin" />}
+                      {isEditing ? 'Guardar Cambios' : 'Crear Evento'}
+                    </button>
+                  )}
                 </div>
               </div>
             </form>
