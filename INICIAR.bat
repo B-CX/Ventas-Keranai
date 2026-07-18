@@ -20,7 +20,7 @@ echo.
 :: 1. Crear carpeta local y copiar archivos del proyecto (excluyendo node_modules y .next)
 echo [1/4] Copiando proyecto al disco local C:...
 if not exist "%WORK_DIR%" mkdir "%WORK_DIR%"
-robocopy "%SRC_DIR%" "%WORK_DIR%" /E /XD node_modules .next /IS /IT /NFL /NDL /NJH /NJS /NC /NS
+robocopy "%SRC_DIR%" "%WORK_DIR%" /E /XD node_modules .next .git /IS /IT /NFL /NDL /NJH /NJS /NC /NS
 echo [OK] Archivos copiados a %WORK_DIR%.
 echo.
 
