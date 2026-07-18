@@ -102,9 +102,10 @@ export default function NuevaVentaPage() {
   const [notas, setNotas] = useState('');
   const [metodoPago, setMetodoPago] = useState('EFECTIVO');
   
-  // Multi-moneda
+  // Multi-moneda y Configuraciones
   const [cotizacionUsd, setCotizacionUsd] = useState<number>(7500);
   const [monedaCobro, setMonedaCobro] = useState('PYG');
+  const [ticketHabilitado, setTicketHabilitado] = useState(true);
 
   // Clientes
   const [clientSearch, setClientSearch] = useState('');
@@ -190,6 +191,9 @@ export default function NuevaVentaPage() {
           const data = await res.json();
           if (data.cotizacionUsd) {
             setCotizacionUsd(data.cotizacionUsd);
+          }
+          if (data.ticketHabilitado !== undefined) {
+            setTicketHabilitado(data.ticketHabilitado);
           }
         }
       } catch (err) {
@@ -844,13 +848,15 @@ export default function NuevaVentaPage() {
             </div>
 
             <div className="flex flex-col gap-3">
-              <a
-                href={`/admin/ventas/${lastVentaId}/ticket`}
-                target="_blank"
-                className="w-full text-center rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 py-2.5 text-sm font-semibold text-white shadow-lg hover:from-violet-500 hover:to-indigo-500 transition active:scale-[0.98]"
-              >
-                🖨️ Imprimir Ticket
-              </a>
+              {ticketHabilitado && (
+                <a
+                  href={`/admin/ventas/${lastVentaId}/ticket`}
+                  target="_blank"
+                  className="w-full text-center rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 py-2.5 text-sm font-semibold text-white shadow-lg hover:from-violet-500 hover:to-indigo-500 transition active:scale-[0.98]"
+                >
+                  🖨️ Imprimir Ticket
+                </a>
+              )}
               <button
                 onClick={() => setShowSuccessModal(false)}
                 className="w-full rounded-xl bg-white/5 border border-white/10 py-2.5 text-sm font-semibold text-white hover:bg-white/10 transition active:scale-[0.98]"

@@ -2,32 +2,51 @@ import { db } from '@/lib/db';
 import { notFound } from 'next/navigation';
 
 export default async function TicketPage({ params }: { params: { id: string } }) {
-  const venta = await db.venta.findUnique({
-    where: { id: params.id },
-    include: {
-      vendedor: { select: { name: true } },
-      cliente: { select: { nombre: true, telefono: true } },
-      items: {
-        include: {
-          variante: {
-            include: { producto: { select: { nombre: true } } }
+  const [venta, config] = await Promise.all([
+    db.venta.findUnique({
+      where: { id: params.id },
+      include: {
+        vendedor: { select: { name: true } },
+        cliente: { select: { nombre: true, telefono: true } },
+        items: {
+          include: {
+            variante: {
+              include: { producto: { select: { nombre: true } } }
+            }
           }
         }
       }
-    }
-  });
+    }),
+    db.configuracion.findUnique({
+      where: { id: 'GLOBAL' }
+    })
+  ]);
 
   if (!venta) {
     notFound();
   }
 
+  if (config && !config.ticketHabilitado) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-zinc-900 text-white">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold text-red-500 mb-2">Impresión Desactivada</h1>
+          <p className="text-zinc-400">La impresión de tickets ha sido desactivada desde la Configuración.</p>
+        </div>
+      </div>
+    );
+  }
+
+  const empresaNombre = config?.ticketEmpresa || 'Sistema Keranai';
+  const contactoWeb = config?.ticketContacto || 'keranai.com';
+
   // Print layout optimized for 80mm thermal printers
   return (
     <div className="bg-white text-black min-h-screen p-4 flex justify-center font-mono text-sm">
-      <div className="w-[80mm] bg-white print:w-full print:m-0 print:shadow-none shadow-lg border p-4 text-center">
+      <div id="ticket-content" className="w-[80mm] bg-white print:w-full print:m-0 print:shadow-none shadow-lg border p-4 text-center mx-auto">
         
         {/* Header */}
-        <h1 className="text-xl font-bold uppercase mb-1">Sistema Keranai</h1>
+        <h1 className="text-xl font-bold uppercase mb-1">{empresaNombre}</h1>
         <p className="text-xs">Comprobante de Venta Interno</p>
         <p className="text-xs">No válido como factura fiscal</p>
         
@@ -90,7 +109,7 @@ export default async function TicketPage({ params }: { params: { id: string } })
         {/* Footer */}
         <div className="mt-8 text-xs text-center">
           <p>¡Gracias por su compra!</p>
-          <p className="mt-1 text-[10px]">keranai.com</p>
+          <p className="mt-1 text-[10px]">{contactoWeb}</p>
         </div>
 
       </div>
@@ -98,13 +117,40 @@ export default async function TicketPage({ params }: { params: { id: string } })
       {/* Print Button (Hidden in Print Mode) */}
       <div className="fixed bottom-8 right-8 print:hidden">
         <button 
-          className="bg-black text-white px-6 py-3 rounded-full shadow-2xl font-bold hover:scale-105 transition"
-          dangerouslySetInnerHTML={{ __html: 'Imprimir Ticket' }}
-        />
+          id="download-pdf-btn"
+          className="bg-gradient-to-r from-red-600 to-rose-600 text-white px-6 py-3 rounded-full shadow-2xl font-bold hover:scale-105 transition flex items-center gap-2"
+        >
+          📄 Descargar PDF
+        </button>
       </div>
-      {/* Script inline to handle button click safely in Next.js App Router Server Component */}
+      {/* Script inline to handle PDF download */}
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
       <script dangerouslySetInnerHTML={{ __html: `
-        document.querySelector('button').addEventListener('click', () => window.print());
+        document.getElementById('download-pdf-btn').addEventListener('click', () => {
+          const btn = document.getElementById('download-pdf-btn');
+          const originalText = btn.innerText;
+          btn.innerText = 'Generando...';
+          btn.disabled = true;
+
+          const element = document.getElementById('ticket-content');
+          
+          // Calcular la altura real aproximada del contenido en mm (1 mm = 3.78 px aprox)
+          const pxHeight = element.offsetHeight;
+          const mmHeight = Math.max(pxHeight / 3.78 + 20, 100);
+
+          const opt = {
+            margin: 0,
+            filename: 'ticket-${venta.id.slice(-6).toUpperCase()}.pdf',
+            image: { type: 'jpeg', quality: 1 },
+            html2canvas: { scale: 3, useCORS: true, logging: false },
+            jsPDF: { unit: 'mm', format: [80, mmHeight], orientation: 'portrait' }
+          };
+
+          html2pdf().set(opt).from(element).save().then(() => {
+            btn.innerText = originalText;
+            btn.disabled = false;
+          });
+        });
       `}} />
     </div>
   );

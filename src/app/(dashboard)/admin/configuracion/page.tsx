@@ -5,6 +5,10 @@ import { Settings, Save, AlertCircle } from 'lucide-react';
 
 export default function ConfiguracionPage() {
   const [cotizacionUsd, setCotizacionUsd] = useState<string>('');
+  const [ticketHabilitado, setTicketHabilitado] = useState(true);
+  const [ticketEmpresa, setTicketEmpresa] = useState('');
+  const [ticketContacto, setTicketContacto] = useState('');
+  
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -20,6 +24,9 @@ export default function ConfiguracionPage() {
       if (res.ok) {
         const data = await res.json();
         setCotizacionUsd(data.cotizacionUsd.toString());
+        setTicketHabilitado(data.ticketHabilitado ?? true);
+        setTicketEmpresa(data.ticketEmpresa || 'Sistema Keranai');
+        setTicketContacto(data.ticketContacto || 'keranai.com');
       }
     } catch (err) {
       console.error(err);
@@ -39,7 +46,12 @@ export default function ConfiguracionPage() {
       const res = await fetch('/api/configuracion', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ cotizacionUsd: Number(cotizacionUsd) })
+        body: JSON.stringify({ 
+          cotizacionUsd: Number(cotizacionUsd),
+          ticketHabilitado,
+          ticketEmpresa,
+          ticketContacto
+        })
       });
 
       if (res.ok) {
@@ -101,6 +113,54 @@ export default function ConfiguracionPage() {
                 placeholder="Ej. 7500"
               />
             </div>
+          </div>
+
+          <div className="border-t border-white/10 pt-6 mt-6">
+            <h2 className="text-xl font-bold text-white mb-6">Impresión de Ticket</h2>
+            
+            <div className="flex items-center gap-4 mb-6">
+              <button
+                type="button"
+                onClick={() => setTicketHabilitado(!ticketHabilitado)}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                  ticketHabilitado ? 'bg-violet-600' : 'bg-zinc-600'
+                }`}
+              >
+                <span
+                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                    ticketHabilitado ? 'translate-x-6' : 'translate-x-1'
+                  }`}
+                />
+              </button>
+              <span className="text-zinc-300 font-medium">
+                {ticketHabilitado ? 'Habilitado' : 'Desactivado'}
+              </span>
+            </div>
+
+            {ticketHabilitado && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-4 bg-white/5 rounded-xl border border-white/10">
+                <div>
+                  <label className="block text-sm font-medium text-zinc-300 mb-2">Título (Nombre de Empresa)</label>
+                  <input
+                    type="text"
+                    value={ticketEmpresa}
+                    onChange={e => setTicketEmpresa(e.target.value)}
+                    className="w-full bg-black/20 border border-white/10 rounded-xl py-3 px-4 text-white focus:outline-none focus:ring-2 focus:ring-violet-500"
+                    placeholder="Ej. Mi Tienda S.A."
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-zinc-300 mb-2">Contacto / Red Social / Web</label>
+                  <input
+                    type="text"
+                    value={ticketContacto}
+                    onChange={e => setTicketContacto(e.target.value)}
+                    className="w-full bg-black/20 border border-white/10 rounded-xl py-3 px-4 text-white focus:outline-none focus:ring-2 focus:ring-violet-500"
+                    placeholder="Ej. wa.me/123456789"
+                  />
+                </div>
+              </div>
+            )}
           </div>
 
           <button

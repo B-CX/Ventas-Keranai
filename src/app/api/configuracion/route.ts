@@ -29,16 +29,36 @@ export async function PATCH(req: Request) {
     }
 
     const body = await req.json();
-    const { cotizacionUsd } = body;
+    const { cotizacionUsd, ticketHabilitado, ticketEmpresa, ticketContacto } = body;
 
-    if (!cotizacionUsd || isNaN(Number(cotizacionUsd))) {
-      return NextResponse.json({ error: 'Cotización inválida' }, { status: 400 });
+    const dataToUpdate: any = {};
+    if (cotizacionUsd !== undefined && !isNaN(Number(cotizacionUsd))) {
+      dataToUpdate.cotizacionUsd = Number(cotizacionUsd);
+    }
+    if (ticketHabilitado !== undefined) {
+      dataToUpdate.ticketHabilitado = Boolean(ticketHabilitado);
+    }
+    if (ticketEmpresa !== undefined) {
+      dataToUpdate.ticketEmpresa = String(ticketEmpresa).trim();
+    }
+    if (ticketContacto !== undefined) {
+      dataToUpdate.ticketContacto = String(ticketContacto).trim();
+    }
+
+    if (Object.keys(dataToUpdate).length === 0) {
+      return NextResponse.json({ error: 'No hay datos válidos para actualizar' }, { status: 400 });
     }
 
     const updated = await db.configuracion.upsert({
       where: { id: 'GLOBAL' },
-      update: { cotizacionUsd: Number(cotizacionUsd) },
-      create: { id: 'GLOBAL', cotizacionUsd: Number(cotizacionUsd) }
+      update: dataToUpdate,
+      create: { 
+        id: 'GLOBAL', 
+        cotizacionUsd: dataToUpdate.cotizacionUsd || 7500,
+        ticketHabilitado: dataToUpdate.ticketHabilitado ?? true,
+        ticketEmpresa: dataToUpdate.ticketEmpresa ?? 'Sistema Keranai',
+        ticketContacto: dataToUpdate.ticketContacto ?? 'keranai.com'
+      }
     });
 
     return NextResponse.json(updated);

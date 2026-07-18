@@ -215,7 +215,10 @@ model CompraItem {
 }
 
 model Configuracion {
-  id            String   @id @default("GLOBAL") // Solo habrá un registro
-  cotizacionUsd Float    @default(7500)
-  updatedAt     DateTime @updatedAt
+  id               String   @id @default("GLOBAL") // Solo habrá un registro
+  cotizacionUsd    Float    @default(7500)
+  ticketHabilitado Boolean  @default(true)
+  ticketEmpresa    String?  @default("Sistema Keranai")
+  ticketContacto   String?  @default("keranai.com")
+  updatedAt        DateTime @updatedAt
 }
