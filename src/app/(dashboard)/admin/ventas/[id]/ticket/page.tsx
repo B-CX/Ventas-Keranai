@@ -43,7 +43,7 @@ export default async function TicketPage({ params }: { params: { id: string } })
   // Print layout optimized for 80mm thermal printers
   return (
     <div className="bg-white text-black min-h-screen p-4 flex justify-center font-mono text-sm">
-      <div id="ticket-content" className="w-[80mm] bg-white print:w-full print:m-0 print:shadow-none shadow-lg border p-4 text-center mx-auto">
+      <div id="ticket-content" className="text-black w-[80mm] bg-white print:w-full print:m-0 print:shadow-none shadow-lg border p-4 text-center mx-auto">
         
         {/* Header */}
         <h1 className="text-xl font-bold uppercase mb-1">{empresaNombre}</h1>
