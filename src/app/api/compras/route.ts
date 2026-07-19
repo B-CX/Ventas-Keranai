@@ -10,7 +10,7 @@ export async function POST(req: Request) {
     }
 
     const body = await req.json();
-    const { proveedor, notas, items } = body;
+    const { proveedor, notas, items, moneda } = body;
     // items debe ser array de { varianteId, cantidad, costoUnit }
 
     if (!items || !Array.isArray(items) || items.length === 0) {
