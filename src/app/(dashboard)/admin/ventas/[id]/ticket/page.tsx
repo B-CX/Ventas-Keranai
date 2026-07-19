@@ -124,6 +124,7 @@ export default async function TicketPage({ params }: { params: { id: string } })
         </button>
       </div>
       {/* Script inline to handle PDF download */}
+      {/* eslint-disable-next-line @next/next/no-sync-scripts */}
       <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
       <script dangerouslySetInnerHTML={{ __html: `
         document.getElementById('download-pdf-btn').addEventListener('click', () => {
