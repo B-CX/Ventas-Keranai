@@ -57,7 +57,7 @@ export async function PUT(
 
   try {
     const { id } = await params;
-    const { nombre, telefono, email, notas } = await req.json();
+    const { nombre, telefono, email, notas, imagen } = await req.json();
 
     if (!nombre) {
       return NextResponse.json({ error: 'El nombre es obligatorio' }, { status: 400 });
@@ -70,6 +70,7 @@ export async function PUT(
         telefono,
         email,
         notas,
+        imagen,
       },
     });
 

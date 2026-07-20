@@ -13,7 +13,7 @@ export async function PUT(
   }
 
   try {
-    const { name, email, password, role, activo } = await req.json();
+    const { name, email, password, role, activo, imagen } = await req.json();
     const { id: userId } = await params;
 
     // Evitar que el admin se desactive a sí mismo
@@ -26,6 +26,7 @@ export async function PUT(
     if (email !== undefined) dataToUpdate.email = email;
     if (role !== undefined) dataToUpdate.role = role;
     if (activo !== undefined) dataToUpdate.activo = activo;
+    if (imagen !== undefined) dataToUpdate.imagen = imagen;
     if (password) {
       dataToUpdate.password = await bcrypt.hash(password, 10);
     }

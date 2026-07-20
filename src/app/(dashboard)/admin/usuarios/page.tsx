@@ -15,6 +15,8 @@ import {
   Eye,
   EyeOff,
 } from 'lucide-react';
+import ImageUploader from '@/components/ImageUploader';
+import Image from 'next/image';
 
 interface UserItem {
   id: string;
@@ -22,6 +24,7 @@ interface UserItem {
   email: string;
   role: string;
   activo: boolean;
+  imagen?: string | null;
   createdAt: string;
 }
 
@@ -48,6 +51,9 @@ export default function UsuariosPage() {
   const [password, setPassword] = useState('');
   const [role, setRole] = useState('VENDEDOR');
   const [activo, setActivo] = useState(true);
+  const [imagen, setImagen] = useState<string>('');
+  
+  const [lightboxImage, setLightboxImage] = useState<string | null>(null);
   
   const [showPassword, setShowPassword] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
@@ -79,6 +85,7 @@ export default function UsuariosPage() {
     setPassword('');
     setRole('VENDEDOR');
     setActivo(true);
+    setImagen('');
     setFormError(null);
     setShowFormModal(true);
   };
@@ -90,6 +97,7 @@ export default function UsuariosPage() {
     setPassword(''); // Empty means don't change password
     setRole(user.role);
     setActivo(user.activo);
+    setImagen(user.imagen || '');
     setFormError(null);
     setShowFormModal(true);
   };
@@ -147,6 +155,7 @@ export default function UsuariosPage() {
       email,
       role,
       activo,
+      imagen: imagen || null,
     };
 
     if (password.trim()) {
@@ -222,9 +231,18 @@ export default function UsuariosPage() {
                     >
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-3">
-                          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-violet-500/10 border border-violet-500/20 text-violet-400 font-bold shrink-0">
-                            {user.name.charAt(0).toUpperCase()}
-                          </div>
+                          {user.imagen ? (
+                            <button
+                              onClick={() => setLightboxImage(user.imagen!)}
+                              className="relative h-10 w-10 shrink-0 overflow-hidden rounded-full border border-white/10 hover:border-violet-500/50 transition-colors cursor-pointer"
+                            >
+                              <Image src={user.imagen} alt={user.name} fill className="object-cover" />
+                            </button>
+                          ) : (
+                            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-violet-500/10 border border-violet-500/20 text-violet-400 font-bold shrink-0">
+                              {user.name.charAt(0).toUpperCase()}
+                            </div>
+                          )}
                           <div className="overflow-hidden">
                             <p className="font-semibold text-white truncate flex items-center gap-1.5">
                               {user.name}
@@ -313,6 +331,14 @@ export default function UsuariosPage() {
                   {formError}
                 </div>
               )}
+
+              <div className="flex flex-col items-center mb-6">
+                <ImageUploader 
+                  currentImage={imagen} 
+                  onImageChange={setImagen} 
+                  label="Foto de Perfil" 
+                />
+              </div>
 
               <div>
                 <label className="block text-xs font-semibold uppercase tracking-wider text-zinc-400">
@@ -418,6 +444,28 @@ export default function UsuariosPage() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Lightbox para Imagen */}
+      {lightboxImage && (
+        <div 
+          className="fixed inset-0 z-[60] flex items-center justify-center bg-black/90 p-4 backdrop-blur-sm cursor-zoom-out"
+          onClick={() => setLightboxImage(null)}
+        >
+          <div className="relative max-w-4xl max-h-[90vh] w-full h-full flex items-center justify-center">
+            <button
+              onClick={() => setLightboxImage(null)}
+              className="absolute top-4 right-4 rounded-full bg-white/10 p-2 text-white hover:bg-white/20 transition backdrop-blur-md"
+            >
+              <X className="h-6 w-6" />
+            </button>
+            <img 
+              src={lightboxImage} 
+              alt="Imagen ampliada" 
+              className="max-w-full max-h-[90vh] object-contain rounded-xl shadow-2xl" 
+            />
           </div>
         </div>
       )}

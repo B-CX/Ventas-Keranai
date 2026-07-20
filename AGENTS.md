@@ -34,3 +34,12 @@ Sigue estrictamente este flujo para evadir el bloqueo:
 4. Usa la herramienta MCP `hosting_deployJsApplication` para desplegar el `hostinger-deploy-auto.zip`. 
 5. Elimina los archivos temporales (`create-env.js` y el `.zip`).
 6. Monitorea el estado de compilación usando `hosting_listJsDeployments`. Hostinger ejecutará el script `postinstall`, generando las contraseñas internamente y completando el despliegue de forma exitosa y segura.
+
+## Flujo de Trabajo: Actualizaciones de Prisma (EPERM Error)
+- **Problema de bloqueo en Windows:** Si necesitas actualizar el esquema de Prisma (`schema.prisma`), **NUNCA** corras `npx prisma generate` si el servidor de Next.js (`npm run dev`) está en ejecución. Windows bloqueará el archivo `.node` lanzando un error `EPERM`.
+- **Solución obligatoria:** Siempre busca y mata el proceso de Node que está usando el puerto 3000 antes de ejecutar la migración y regenerar el cliente de Prisma. Luego, vuelve a arrancar el servidor en segundo plano.
+
+## Estándar de UI: Subida de Imágenes
+- Todas las imágenes subidas por el usuario (Fotos de perfil, Logos, Productos, Clientes) deben procesarse de forma estricta en el cliente (frontend) antes de enviarse al servidor.
+- **Formato obligatorio:** Usar un `canvas` en JavaScript para redimensionar la imagen a un máximo de `1024x1024` píxeles, recortarla en una proporción cuadrada (`1:1`) centrándola, y finalmente exportarla a `Base64` como `image/webp` con un 85% de calidad (`0.85`).
+- Esto garantiza que la base de datos SQLite no colapse por el peso excesivo de archivos originales.

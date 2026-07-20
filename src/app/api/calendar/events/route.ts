@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/auth';
+import { db } from '@/lib/db';
 import { getGoogleOAuth2Client } from '@/lib/google-calendar';
 import { google } from 'googleapis';
 
@@ -134,6 +135,16 @@ export async function POST(req: NextRequest) {
 
     const evt = response.data;
     const isAllDay = !!evt.start?.date;
+
+    // Crear notificación de calendario
+    await db.notificacion.create({
+      data: {
+        tipo: 'EVENTO',
+        titulo: 'Nuevo Evento Agendado',
+        mensaje: nombre,
+        link: '/admin/calendario'
+      }
+    });
 
     return NextResponse.json({
       id: evt.id,

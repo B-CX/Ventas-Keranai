@@ -6,6 +6,7 @@ import { usePathname } from 'next/navigation';
 import { useTheme } from '@/components/ThemeProvider';
 import CalendarWidget from '@/components/CalendarWidget';
 import NotesWidget from '@/components/NotesWidget';
+import NotificationWidget from '@/components/NotificationWidget';
 
 interface HeaderProps {
   onMenuOpen: () => void;
@@ -42,6 +43,7 @@ export default function Header({ onMenuOpen }: HeaderProps) {
         <div className="flex items-center gap-2">
           <CalendarWidget />
           <NotesWidget />
+          <NotificationWidget />
           
           <button
             onClick={toggleTheme}

@@ -83,6 +83,16 @@ export async function POST(req: Request) {
       },
     });
 
+    // Crear notificación
+    await db.notificacion.create({
+      data: {
+        tipo: 'PRODUCTO',
+        titulo: 'Nuevo Producto Añadido',
+        mensaje: nombre,
+        link: '/admin/productos'
+      }
+    });
+
     return NextResponse.json(producto, { status: 201 });
   } catch (error) {
     console.error(error);

@@ -128,6 +128,7 @@ export default function ProductosPage() {
   const isAdmin = role === 'ADMIN';
 
   const [activeTab, setActiveTab] = useState<'productos' | 'grupos' | 'categorias'>('productos');
+  const [zoomImage, setZoomImage] = useState<string | null>(null);
 
   // DATA
   const [productos, setProductos] = useState<Producto[]>([]);
@@ -286,7 +287,7 @@ export default function ProductosPage() {
       const img = new Image();
       img.onload = () => {
         const canvas = document.createElement('canvas');
-        const size = 256;
+        const size = 1024;
         canvas.width = size;
         canvas.height = size;
         const ctx = canvas.getContext('2d')!;
@@ -294,7 +295,7 @@ export default function ProductosPage() {
         const sx = (img.width - minSide) / 2;
         const sy = (img.height - minSide) / 2;
         ctx.drawImage(img, sx, sy, minSide, minSide, 0, 0, size, size);
-        const base64 = canvas.toDataURL('image/webp', 0.70);
+        const base64 = canvas.toDataURL('image/webp', 0.85);
         setImagen(base64);
       };
       img.src = e.target?.result as string;
@@ -691,7 +692,7 @@ export default function ProductosPage() {
                     }} />
                     {imagen ? (
                       <div className="relative">
-                        <img src={imagen} alt="Preview" className={`h-20 w-20 rounded-xl object-cover border border-violet-500/40 shadow-lg ${isAdmin ? 'cursor-pointer' : ''}`} onClick={() => isAdmin && fileInputRef.current?.click()} />
+                        <img src={imagen} alt="Preview" className={`h-20 w-20 rounded-xl object-cover border border-violet-500/40 shadow-lg cursor-pointer hover:opacity-80 transition`} onClick={() => setZoomImage(imagen)} />
                         {isAdmin && (
                           <button type="button" onClick={() => setImagen(null)} className="absolute -top-1.5 -right-1.5 h-5 w-5 rounded-full bg-rose-600 flex items-center justify-center">
                             <X className="h-3 w-3 text-white" />
@@ -757,9 +758,21 @@ export default function ProductosPage() {
               <div>
                 <label className="block text-xs font-semibold uppercase tracking-wider text-zinc-400">Descripción</label>
                 <textarea
-                  value={descripcion} onChange={(e) => setDescripcion(e.target.value)} rows={2}
+                  ref={(e) => {
+                    if (e) {
+                      e.style.height = 'auto';
+                      e.style.height = `${e.scrollHeight}px`;
+                    }
+                  }}
+                  value={descripcion} 
+                  onChange={(e) => {
+                    setDescripcion(e.target.value);
+                    e.target.style.height = 'auto';
+                    e.target.style.height = `${e.target.scrollHeight}px`;
+                  }} 
+                  rows={2}
                   disabled={!isAdmin}
-                  className="mt-2 w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-2.5 text-sm text-white placeholder-zinc-600 outline-none focus:border-violet-500 resize-none disabled:opacity-70"
+                  className="mt-2 w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-2.5 text-sm text-white placeholder-zinc-600 outline-none focus:border-violet-500 resize-none overflow-hidden disabled:opacity-70 transition-all duration-200"
                 />
               </div>
 
@@ -830,6 +843,25 @@ export default function ProductosPage() {
               </div>
             </form>
           </div>
+        </div>
+      )}
+      {/* Lightbox para Imágenes */}
+      {zoomImage && (
+        <div 
+          className="fixed inset-0 z-[200] flex items-center justify-center bg-black/90 p-4 backdrop-blur-md cursor-zoom-out"
+          onClick={() => setZoomImage(null)}
+        >
+          <img 
+            src={zoomImage} 
+            alt="Zoomed" 
+            className="max-w-full max-h-[90vh] rounded-2xl object-contain shadow-2xl border border-white/10"
+          />
+          <button 
+            className="absolute top-6 right-6 p-2 rounded-full bg-white/10 hover:bg-white/20 text-white transition"
+            onClick={() => setZoomImage(null)}
+          >
+            <X className="h-6 w-6" />
+          </button>
         </div>
       )}
     </div>

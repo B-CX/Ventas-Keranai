@@ -23,6 +23,7 @@ interface Cliente {
   telefono: string | null;
   email: string | null;
   notas: string | null;
+  imagen: string | null;
   createdAt: string;
 }
 
@@ -64,6 +65,7 @@ export default function ClientesCRM() {
   // Modales
   const [showFormModal, setShowFormModal] = useState(false);
   const [showHistoryModal, setShowHistoryModal] = useState(false);
+  const [zoomImage, setZoomImage] = useState<string | null>(null);
   
   // Formularios
   const [selectedCliente, setSelectedCliente] = useState<Cliente | null>(null);
@@ -71,7 +73,9 @@ export default function ClientesCRM() {
   const [telefono, setTelefono] = useState('');
   const [email, setEmail] = useState('');
   const [notas, setNotas] = useState('');
+  const [imagen, setImagen] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
   const [formError, setFormError] = useState<string | null>(null);
   
   // Historial
@@ -106,6 +110,7 @@ export default function ClientesCRM() {
     setTelefono('');
     setEmail('');
     setNotas('');
+    setImagen(null);
     setFormError(null);
     setShowFormModal(true);
   };
@@ -116,6 +121,7 @@ export default function ClientesCRM() {
     setTelefono(cliente.telefono || '');
     setEmail(cliente.email || '');
     setNotas(cliente.notas || '');
+    setImagen(cliente.imagen || null);
     setFormError(null);
     setShowFormModal(true);
   };
@@ -136,6 +142,29 @@ export default function ClientesCRM() {
     }
   };
 
+  const handleImageFile = React.useCallback((file: File) => {
+    if (!file.type.startsWith('image/')) return;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const size = 1024;
+        canvas.width = size;
+        canvas.height = size;
+        const ctx = canvas.getContext('2d')!;
+        const minSide = Math.min(img.width, img.height);
+        const sx = (img.width - minSide) / 2;
+        const sy = (img.height - minSide) / 2;
+        ctx.drawImage(img, sx, sy, minSide, minSide, 0, 0, size, size);
+        const base64 = canvas.toDataURL('image/webp', 0.85);
+        setImagen(base64);
+      };
+      img.src = e.target?.result as string;
+    };
+    reader.readAsDataURL(file);
+  }, []);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!nombre.trim()) return;
@@ -148,6 +177,7 @@ export default function ClientesCRM() {
       telefono: telefono || null,
       email: email || null,
       notas: notas || null,
+      imagen: imagen || null,
     };
 
     try {
@@ -232,12 +262,21 @@ export default function ClientesCRM() {
       ) : (
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {clientes.map((cliente) => (
-            <div key={cliente.id} className="glass-card flex flex-col justify-between rounded-2xl p-6">
-              <div>
-                <div className="flex items-start justify-between">
-                  <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-violet-500/10 border border-violet-500/20 text-violet-400 font-bold">
-                    {cliente.nombre.charAt(0).toUpperCase()}
-                  </div>
+            <div key={cliente.id} className="glass-panel border border-white/10 rounded-2xl p-5 hover:bg-white/5 transition-colors">
+              <div className="flex justify-between items-start mb-4">
+                <div className="flex gap-4 items-center">
+                  {cliente.imagen ? (
+                    <img 
+                      src={cliente.imagen} 
+                      alt={cliente.nombre} 
+                      className="h-12 w-12 rounded-xl object-cover border border-indigo-500/30 cursor-pointer hover:opacity-80 transition" 
+                      onClick={() => setZoomImage(cliente.imagen)}
+                    />
+                  ) : (
+                    <div className="h-12 w-12 rounded-xl bg-indigo-500/10 border border-indigo-500/30 flex items-center justify-center text-indigo-400 font-bold text-xl uppercase">
+                      {cliente.nombre.charAt(0)}
+                    </div>
+                  )}
                   <div className="flex gap-2">
                     <button
                       onClick={() => handleOpenEdit(cliente)}
@@ -264,6 +303,7 @@ export default function ClientesCRM() {
                     )}
                   </div>
                 </div>
+              </div>
 
                 <h3 className="mt-4 text-lg font-bold text-white truncate">{cliente.nombre}</h3>
 
@@ -287,7 +327,6 @@ export default function ClientesCRM() {
                     </div>
                   )}
                 </div>
-              </div>
 
               <div className="mt-6 pt-4 border-t border-white/5 text-xs text-zinc-500">
                 Registrado: {new Date(cliente.createdAt).toLocaleDateString('es-AR')}
@@ -300,10 +339,10 @@ export default function ClientesCRM() {
       {/* Modal de Crear / Editar Cliente */}
       {showFormModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-md rounded-2xl border border-white/10 bg-[#12121a] p-6 shadow-2xl">
+          <div className="w-full max-w-xl rounded-2xl border border-white/10 bg-[#12121a] p-6 shadow-2xl">
             <div className="flex items-center justify-between border-b border-white/5 pb-4">
               <h3 className="text-lg font-bold text-white">
-                {selectedCliente ? 'Editar Cliente' : 'Nuevo Cliente'}
+                {selectedCliente ? (isAdmin ? 'Editar Cliente' : 'Detalles del Cliente') : 'Nuevo Cliente'}
               </h3>
               <button
                 onClick={() => setShowFormModal(false)}
@@ -320,18 +359,47 @@ export default function ClientesCRM() {
                 </div>
               )}
 
-              <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-zinc-400">
-                  Nombre Completo
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={nombre}
-                  onChange={(e) => setNombre(e.target.value)}
-                  placeholder="Juan Pérez"
-                  className="mt-2 w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-2.5 text-sm text-white placeholder-zinc-600 outline-none transition focus:border-violet-500 focus:bg-white/[0.08]"
-                />
+              <div className="flex gap-4 items-start">
+                <div className="shrink-0">
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-zinc-400 mb-2">Foto</label>
+                  <div className="relative group">
+                    <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={(e) => {
+                      if (e.target.files?.[0]) handleImageFile(e.target.files[0]);
+                    }} />
+                    {imagen ? (
+                      <div className="relative">
+                        <img 
+                          src={imagen} 
+                          alt="Preview" 
+                          className="h-20 w-20 rounded-xl object-cover border border-violet-500/40 shadow-lg cursor-pointer hover:opacity-80 transition" 
+                          onClick={() => setZoomImage(imagen)} 
+                        />
+                        {isAdmin && (
+                          <button type="button" onClick={() => setImagen(null)} className="absolute -top-1.5 -right-1.5 h-5 w-5 rounded-full bg-rose-600 flex items-center justify-center">
+                            <X className="h-3 w-3 text-white" />
+                          </button>
+                        )}
+                      </div>
+                    ) : isAdmin ? (
+                      <button type="button" onClick={() => fileInputRef.current?.click()} className="h-20 w-20 rounded-xl border-2 border-dashed border-white/10 bg-white/[0.02] flex flex-col items-center justify-center gap-1 hover:border-violet-500/50">
+                        <div className="text-[9px] text-zinc-600 font-semibold mt-1">Subir</div>
+                      </button>
+                    ) : (
+                      <div className="h-20 w-20 rounded-xl border border-white/10 bg-white/[0.02] flex flex-col items-center justify-center">
+                        <span className="text-[9px] text-zinc-600 font-semibold text-center leading-tight">Sin<br/>Foto</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="flex-1">
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-zinc-400">Nombre Completo</label>
+                  <input
+                    type="text" required value={nombre} onChange={(e) => setNombre(e.target.value)}
+                    disabled={!isAdmin}
+                    className="mt-2 w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-2.5 text-sm text-white placeholder-zinc-600 outline-none focus:border-violet-500 disabled:opacity-70"
+                  />
+                </div>
               </div>
 
               <div>
@@ -482,6 +550,26 @@ export default function ClientesCRM() {
           </div>
         </div>
       )}
+      {/* Lightbox para Imágenes */}
+      {zoomImage && (
+        <div 
+          className="fixed inset-0 z-[200] flex items-center justify-center bg-black/90 p-4 backdrop-blur-md cursor-zoom-out"
+          onClick={() => setZoomImage(null)}
+        >
+          <img 
+            src={zoomImage} 
+            alt="Zoomed" 
+            className="max-w-full max-h-[90vh] rounded-2xl object-contain shadow-2xl border border-white/10"
+          />
+          <button 
+            className="absolute top-6 right-6 p-2 rounded-full bg-white/10 hover:bg-white/20 text-white transition"
+            onClick={() => setZoomImage(null)}
+          >
+            <X className="h-6 w-6" />
+          </button>
+        </div>
+      )}
+
     </div>
   );
 }

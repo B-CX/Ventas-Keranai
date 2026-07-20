@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { signOut, useSession } from 'next-auth/react';
@@ -29,8 +29,33 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   const pathname = usePathname();
   const { data: session } = useSession();
   const role = (session?.user as any)?.role;
-  const userName = session?.user?.name || 'Usuario';
+  const defaultUserName = session?.user?.name || 'Usuario';
   const userEmail = session?.user?.email || '';
+
+  const [appName, setAppName] = useState('Ventas Interno');
+  const [appLogo, setAppLogo] = useState('/logo-keranai.png');
+  const [displayName, setDisplayName] = useState(defaultUserName);
+  const [avatar, setAvatar] = useState<string | null>(null);
+
+  useEffect(() => {
+    // Fetch global config
+    fetch('/api/configuracion')
+      .then(res => res.json())
+      .then(data => {
+        if (data.appName) setAppName(data.appName);
+        if (data.appLogo) setAppLogo(data.appLogo);
+      })
+      .catch(console.error);
+
+    // Fetch user profile
+    fetch('/api/me')
+      .then(res => res.json())
+      .then(data => {
+        if (data.name) setDisplayName(data.name);
+        if (data.imagen) setAvatar(data.imagen);
+      })
+      .catch(console.error);
+  }, []);
 
   const adminLinks = [
     { name: 'Inicio', href: '/admin', icon: Home },
@@ -51,6 +76,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
     { name: 'Consultar Stock', href: '/admin/productos', icon: Package },
     { name: 'Clientes', href: '/admin/clientes', icon: Users },
     { name: 'Calendario', href: '/admin/calendario', icon: CalendarDays },
+    { name: 'Configuraciones', href: '/admin/configuracion', icon: Settings },
   ];
 
   const links = role === 'ADMIN' ? adminLinks : sellerLinks;
@@ -79,12 +105,12 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
           <Link href="/" className="flex items-center gap-2" onClick={onClose}>
             <div className="flex h-8 w-8 items-center justify-center rounded-lg overflow-hidden bg-zinc-100 dark:bg-white/5 shadow-sm shadow-violet-600/10 dark:shadow-violet-600/20">
               <img
-                src="/logo-keranai.png"
-                alt="Keranai"
+                src={appLogo}
+                alt={appName}
                 className="h-8 w-8 object-cover rounded-lg"
               />
             </div>
-            <span className="font-bold tracking-tight text-zinc-800 dark:text-white">Ventas Interno</span>
+            <span className="font-bold tracking-tight text-zinc-800 dark:text-white truncate max-w-[150px]" title={appName}>{appName}</span>
           </Link>
 
           <button
@@ -95,14 +121,17 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
           </button>
         </div>
 
-        {/* User Info */}
         <div className="px-6 py-6 border-b border-zinc-100 dark:border-white/5">
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-zinc-100 dark:bg-white/[0.04] border border-zinc-200 dark:border-white/10 text-violet-600 dark:text-violet-400 font-bold">
-              {userName.charAt(0).toUpperCase()}
-            </div>
+            {avatar ? (
+              <img src={avatar} alt="Perfil" className="h-10 w-10 rounded-xl object-cover border border-zinc-200 dark:border-white/10" />
+            ) : (
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-zinc-100 dark:bg-white/[0.04] border border-zinc-200 dark:border-white/10 text-violet-600 dark:text-violet-400 font-bold">
+                {displayName.charAt(0).toUpperCase()}
+              </div>
+            )}
             <div className="flex-1 overflow-hidden">
-              <h4 className="truncate text-sm font-semibold text-zinc-800 dark:text-white">{userName}</h4>
+              <h4 className="truncate text-sm font-semibold text-zinc-800 dark:text-white" title={displayName}>{displayName}</h4>
               <span className="inline-flex items-center rounded-full bg-violet-500/10 px-2 py-0.5 text-xs font-medium text-violet-600 dark:text-violet-400 border border-violet-500/20">
                 {role === 'ADMIN' ? 'Administrador' : 'Vendedor'}
               </span>

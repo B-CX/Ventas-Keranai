@@ -29,7 +29,7 @@ export async function PATCH(req: Request) {
     }
 
     const body = await req.json();
-    const { cotizacionUsd, ticketHabilitado, ticketEmpresa, ticketContacto } = body;
+    const { cotizacionUsd, ticketHabilitado, ticketEmpresa, ticketContacto, appLogo, appName } = body;
 
     const dataToUpdate: any = {};
     if (cotizacionUsd !== undefined && !isNaN(Number(cotizacionUsd))) {
@@ -44,6 +44,12 @@ export async function PATCH(req: Request) {
     if (ticketContacto !== undefined) {
       dataToUpdate.ticketContacto = String(ticketContacto).trim();
     }
+    if (appLogo !== undefined) {
+      dataToUpdate.appLogo = appLogo;
+    }
+    if (appName !== undefined) {
+      dataToUpdate.appName = String(appName).trim();
+    }
 
     if (Object.keys(dataToUpdate).length === 0) {
       return NextResponse.json({ error: 'No hay datos válidos para actualizar' }, { status: 400 });
@@ -57,7 +63,9 @@ export async function PATCH(req: Request) {
         cotizacionUsd: dataToUpdate.cotizacionUsd || 7500,
         ticketHabilitado: dataToUpdate.ticketHabilitado ?? true,
         ticketEmpresa: dataToUpdate.ticketEmpresa ?? 'Sistema Keranai',
-        ticketContacto: dataToUpdate.ticketContacto ?? 'keranai.com'
+        ticketContacto: dataToUpdate.ticketContacto ?? 'keranai.com',
+        appLogo: dataToUpdate.appLogo || null,
+        appName: dataToUpdate.appName || 'Ventas Interno'
       }
     });
 

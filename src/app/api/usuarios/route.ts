@@ -18,6 +18,7 @@ export async function GET() {
         email: true,
         role: true,
         activo: true,
+        imagen: true,
         createdAt: true,
       },
     });
@@ -36,7 +37,7 @@ export async function POST(req: Request) {
   }
 
   try {
-    const { name, email, password, role } = await req.json();
+    const { name, email, password, role, imagen } = await req.json();
 
     if (!name || !email || !password || !role) {
       return NextResponse.json({ error: 'Faltan campos requeridos' }, { status: 400 });
@@ -58,6 +59,7 @@ export async function POST(req: Request) {
         email,
         password: hashedPassword,
         role,
+        imagen: imagen || null,
         activo: true,
       },
       select: {

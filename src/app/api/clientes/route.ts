@@ -40,7 +40,7 @@ export async function POST(req: Request) {
   }
 
   try {
-    const { nombre, telefono, email, notas } = await req.json();
+    const { nombre, telefono, email, notas, imagen } = await req.json();
 
     if (!nombre) {
       return NextResponse.json({ error: 'El nombre es obligatorio' }, { status: 400 });
@@ -52,7 +52,18 @@ export async function POST(req: Request) {
         telefono,
         email,
         notas,
+        imagen,
       },
+    });
+
+    // Crear notificación
+    await db.notificacion.create({
+      data: {
+        tipo: 'CLIENTE',
+        titulo: 'Nuevo Cliente Registrado',
+        mensaje: nombre,
+        link: '/admin/clientes'
+      }
     });
 
     return NextResponse.json(cliente, { status: 201 });

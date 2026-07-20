@@ -16,10 +16,12 @@ model User {
   role        String        @default("VENDEDOR") // ADMIN | VENDEDOR
   activo      Boolean       @default(true)
   ventas      Venta[]
+  imagen      String? // Imagen en Base64 (recortada 1:1)
   createdAt   DateTime      @default(now())
   CajaSession CajaSession[]
   Gasto       Gasto[]
   Compra      Compra[]
+  ultimaLecturaNotif DateTime? // Fecha de última apertura de la campana
 }
 
 model Producto {
@@ -77,6 +79,7 @@ model Cliente {
   telefono  String?
   email     String?
   notas     String?
+  imagen    String? // Imagen en Base64 (recortada 1:1)
   ventas    Venta[]
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -123,8 +126,18 @@ model PrecioItem {
   agotado   Boolean  @default(false)
   pendiente String? // pendientes (solo SERVICIOS)
   orden     Int      @default(0)
+  montoUsd  Float    @default(0)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+model Notificacion {
+  id        String   @id @default(cuid())
+  tipo      String   // "PRODUCTO", "CLIENTE", "VENTA", "EVENTO"
+  titulo    String
+  mensaje   String
+  link      String
+  createdAt DateTime @default(now())
 }
 
 model CalendarToken {
@@ -220,5 +233,7 @@ model Configuracion {
   ticketHabilitado Boolean  @default(true)
   ticketEmpresa    String?  @default("Sistema Keranai")
   ticketContacto   String?  @default("keranai.com")
+  appLogo          String? // Base64 del logo
+  appName          String   @default("Ventas Interno")
   updatedAt        DateTime @updatedAt
 }

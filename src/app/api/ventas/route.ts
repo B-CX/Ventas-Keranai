@@ -144,6 +144,16 @@ export async function POST(req: Request) {
         },
       });
 
+      // Crear notificación de venta
+      await tx.notificacion.create({
+        data: {
+          tipo: 'VENTA',
+          titulo: 'Nueva Venta Registrada',
+          mensaje: `Total: ${monedaCobro === 'USD' ? 'USD ' : 'Gs. '}${total}`,
+          link: '/admin/ventas'
+        }
+      });
+
       return venta;
     });
 
