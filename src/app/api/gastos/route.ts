@@ -10,9 +10,23 @@ export async function GET(req: Request) {
     }
 
     const { searchParams } = new URL(req.url);
-    const limit = Number(searchParams.get('limit')) || 50;
+    const limit = Number(searchParams.get('limit')) || 100;
+    const desde = searchParams.get('desde');
+    const hasta = searchParams.get('hasta');
+
+    const where: any = {};
+    if (desde || hasta) {
+      where.fecha = {};
+      if (desde) where.fecha.gte = new Date(desde);
+      if (hasta) {
+        const hastaDate = new Date(hasta);
+        hastaDate.setUTCHours(23, 59, 59, 999);
+        where.fecha.lte = hastaDate;
+      }
+    }
 
     const gastos = await db.gasto.findMany({
+      where,
       take: limit,
       orderBy: { fecha: 'desc' },
       include: {

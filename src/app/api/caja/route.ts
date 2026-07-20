@@ -75,9 +75,9 @@ export async function PATCH(req: Request) {
     }
 
     const body = await req.json();
-    const { cajaId } = body;
+    const { cajaId, saldoFinal, saldoFinalUsd, notas } = body;
 
-    if (!cajaId) {
+    if (!cajaId || saldoFinal === undefined || saldoFinalUsd === undefined) {
       return NextResponse.json({ error: 'Datos incompletos' }, { status: 400 });
     }
 
@@ -86,14 +86,8 @@ export async function PATCH(req: Request) {
       include: { ventas: true, gastos: true, compras: true, movimientos: true }
     });
 
-    if (!activeSession || activeSession.usuarioId !== session.user.id) {
-      return NextResponse.json({ error: 'Caja no encontrada' }, { status: 404 });
-    }
-
-    const { saldoFinal, saldoFinalUsd, notas } = await req.json();
-
-    if (saldoFinal === undefined || saldoFinalUsd === undefined) {
-      return NextResponse.json({ error: 'Faltan datos' }, { status: 400 });
+    if (!activeSession || activeSession.estado !== 'ABIERTA') {
+      return NextResponse.json({ error: 'Caja no encontrada o ya cerrada' }, { status: 404 });
     }
 
     // Calcular ingresos y egresos en PYG

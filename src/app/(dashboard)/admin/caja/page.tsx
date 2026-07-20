@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import {
   Wallet, ArrowDownRight, ArrowUpRight, Lock, Unlock,
   AlertCircle, Plus, Minus, History, LayoutDashboard,
-  ChevronDown, ChevronUp, X, Calculator
+  ChevronDown, ChevronUp, X, Calculator, Trash2
 } from 'lucide-react';
 
 // ─── DENOMINACIONES ──────────────────────────────────────────────────────────
@@ -12,7 +12,8 @@ const BILLETES_PYG = [100000, 50000, 20000, 10000, 5000, 2000, 1000, 500];
 const BILLETES_USD = [100, 50, 20, 10, 5, 1];
 
 // ─── HELPERS ─────────────────────────────────────────────────────────────────
-const gs = (n: number) => `₲ ${Math.round(n).toLocaleString('es-PY')}`;
+// Formato paraguayo: 1.000.000 Gs.
+const gs = (n: number) => `${Math.round(n).toLocaleString('es-PY')} Gs.`;
 const usd = (n: number) => `$ ${n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
 function difBadge(dif: number, moneda: 'pyg' | 'usd') {
@@ -59,7 +60,7 @@ function CalculadoraBilletes({
           <div className="space-y-2">
             {BILLETES_PYG.map(b => (
               <div key={b} className="flex items-center gap-3">
-                <span className="text-sm text-zinc-300 w-24 text-right">₲ {b.toLocaleString()}</span>
+                <span className="text-sm text-zinc-300 w-28 text-right">{b.toLocaleString('es-PY')} Gs.</span>
                 <input
                   type="number" min="0"
                   value={cantPyg[b] || ''}
@@ -67,8 +68,8 @@ function CalculadoraBilletes({
                   placeholder="0"
                   className="w-20 bg-black/30 border border-white/10 rounded-lg py-1.5 px-3 text-white text-sm focus:outline-none focus:ring-1 focus:ring-violet-500"
                 />
-                <span className="text-xs text-zinc-500">
-                  = ₲ {((Number(cantPyg[b]) || 0) * b).toLocaleString()}
+                <span className="text-xs text-zinc-500 flex-1">
+                  = {((Number(cantPyg[b]) || 0) * b).toLocaleString('es-PY')} Gs.
                 </span>
               </div>
             ))}
@@ -85,7 +86,7 @@ function CalculadoraBilletes({
           <div className="space-y-2">
             {BILLETES_USD.map(b => (
               <div key={b} className="flex items-center gap-3">
-                <span className="text-sm text-zinc-300 w-24 text-right">$ {b}</span>
+                <span className="text-sm text-zinc-300 w-28 text-right">$ {b}</span>
                 <input
                   type="number" min="0"
                   value={cantUsd[b] || ''}
@@ -93,7 +94,7 @@ function CalculadoraBilletes({
                   placeholder="0"
                   className="w-20 bg-black/30 border border-white/10 rounded-lg py-1.5 px-3 text-white text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500"
                 />
-                <span className="text-xs text-zinc-500">
+                <span className="text-xs text-zinc-500 flex-1">
                   = $ {((Number(cantUsd[b]) || 0) * b).toFixed(2)}
                 </span>
               </div>
@@ -163,10 +164,26 @@ function ModalMovimiento({
           <label className="block text-sm text-zinc-300 mb-1">Monto</label>
           <div className="relative">
             <span className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500">{moneda === 'PYG' ? '₲' : '$'}</span>
-            <input type="number" required min="0.01" step={moneda === 'PYG' ? '1' : '0.01'}
-              value={monto} onChange={e => setMonto(e.target.value)}
-              className="w-full bg-black/20 border border-white/10 rounded-xl py-3 pl-8 pr-4 text-white focus:outline-none focus:ring-2 focus:ring-violet-500"
-              placeholder={moneda === 'PYG' ? '0' : '0.00'} />
+            {moneda === 'PYG' ? (
+              <input
+                type="text"
+                inputMode="numeric"
+                required
+                value={monto}
+                onChange={e => { if (/^\d*$/.test(e.target.value)) setMonto(e.target.value); }}
+                className="w-full bg-black/20 border border-white/10 rounded-xl py-3 pl-8 pr-4 text-white focus:outline-none focus:ring-2 focus:ring-violet-500"
+                placeholder="15000" />
+            ) : (
+              <input
+                type="number"
+                required
+                min="0.01"
+                step="0.01"
+                value={monto}
+                onChange={e => setMonto(e.target.value)}
+                className="w-full bg-black/20 border border-white/10 rounded-xl py-3 pl-8 pr-4 text-white focus:outline-none focus:ring-2 focus:ring-violet-500"
+                placeholder="0.00" />
+            )}
           </div>
         </div>
         <div>
@@ -190,12 +207,31 @@ function HistorialTab() {
   const [loading, setLoading] = useState(true);
   const [expanded, setExpanded] = useState<string | null>(null);
 
-  useEffect(() => {
+  const fetchHistorial = () => {
     fetch('/api/caja/historial').then(r => r.json()).then(d => {
       setHistorial(Array.isArray(d) ? d : []);
       setLoading(false);
     });
-  }, []);
+  };
+
+  useEffect(() => { fetchHistorial(); }, []);
+
+  const handleDelete = async (id: string) => {
+    if (!window.confirm('¿Estás seguro de eliminar este registro de caja cerrada? Las operaciones relacionadas (Ventas, Gastos) NO se borrarán, pero quedarán huérfanas de este cierre.')) return;
+    
+    try {
+      const res = await fetch(`/api/caja/${id}`, { method: 'DELETE' });
+      if (res.ok) {
+        fetchHistorial();
+      } else {
+        const errorData = await res.json();
+        alert(`Error: ${errorData.error || 'No se pudo eliminar'}`);
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Error al intentar eliminar.');
+    }
+  };
 
   if (loading) return <div className="text-center text-zinc-400 py-12">Cargando historial...</div>;
   if (historial.length === 0) return (
@@ -272,6 +308,11 @@ function HistorialTab() {
                     <p className="text-zinc-200 text-sm">{c.notas}</p>
                   </div>
                 )}
+                <div className="col-span-2 sm:col-span-4 mt-2 flex justify-end border-t border-white/5 pt-4">
+                  <button onClick={() => handleDelete(c.id)} className="flex items-center gap-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors">
+                    <Trash2 className="w-3.5 h-3.5" /> Eliminar Cierre de Caja
+                  </button>
+                </div>
               </div>
             )}
           </div>
@@ -423,9 +464,14 @@ export default function CajaPage() {
                     <label className="block text-sm font-medium text-zinc-300 mb-1">Guaraníes (PYG)</label>
                     <div className="relative">
                       <span className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500">₲</span>
-                      <input type="number" required min="0" value={saldoInicial} onChange={e => setSaldoInicial(e.target.value)}
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        required
+                        value={saldoInicial}
+                        onChange={e => { if (/^\d*$/.test(e.target.value)) setSaldoInicial(e.target.value); }}
                         className="w-full bg-black/20 border border-white/10 rounded-xl py-3 pl-8 pr-4 text-white focus:outline-none focus:ring-2 focus:ring-violet-500"
-                        placeholder="0" />
+                        placeholder="50000" />
                     </div>
                   </div>
                   <div>
@@ -458,50 +504,67 @@ export default function CajaPage() {
               </div>
 
               {/* PANELES PYG + USD */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+
                 {/* GUARANÍES */}
-                <div className="glass-panel border border-blue-500/20 bg-blue-500/5 p-6 rounded-2xl space-y-4">
-                  <h3 className="text-xl font-bold text-white flex items-center gap-2">🇵🇾 Guaraníes (PYG)</h3>
-                  <div className="grid grid-cols-3 gap-2">
-                    <div>
-                      <p className="text-xs text-zinc-400">Saldo Inicial</p>
-                      <p className="text-lg font-bold text-white mt-1">{gs(caja.saldoInicial)}</p>
+                <div className="glass-panel border border-blue-500/30 bg-gradient-to-br from-blue-500/10 to-blue-500/5 p-6 rounded-2xl flex flex-col gap-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xl">🇵🇾</span>
+                      <div>
+                        <p className="text-xs text-blue-300 font-semibold tracking-wide uppercase">Guaraníes</p>
+                        <p className="text-xs text-zinc-500">PYG</p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="text-xs text-zinc-400 flex items-center gap-1"><ArrowUpRight className="w-3 h-3 text-green-400" /> Ingresos</p>
-                      <p className="text-lg font-bold text-green-400 mt-1">+{gs(ingresosPyg)}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-zinc-400 flex items-center gap-1"><ArrowDownRight className="w-3 h-3 text-red-400" /> Egresos</p>
-                      <p className="text-lg font-bold text-red-400 mt-1">-{gs(egresosPyg)}</p>
+                    <div className="bg-blue-500/20 border border-blue-500/30 rounded-xl px-3 py-1">
+                      <p className="text-xs text-blue-300 font-medium">Balance esperado</p>
+                      <p className="text-xl font-bold text-blue-300 text-right">{gs(saldoTeoricoPyg)}</p>
                     </div>
                   </div>
-                  <div className="bg-black/40 border border-white/10 p-4 rounded-xl flex justify-between items-center">
-                    <span className="text-sm text-zinc-400">Balance Esperado</span>
-                    <span className="text-2xl font-bold text-blue-400">{gs(saldoTeoricoPyg)}</span>
+                  <div className="grid grid-cols-3 gap-2 pt-2 border-t border-white/5">
+                    <div className="bg-black/20 rounded-xl p-3">
+                      <p className="text-xs text-zinc-500 mb-1">Inicial</p>
+                      <p className="text-sm font-bold text-white">{gs(caja.saldoInicial)}</p>
+                    </div>
+                    <div className="bg-green-500/10 rounded-xl p-3">
+                      <p className="text-xs text-green-500 mb-1 flex items-center gap-0.5"><ArrowUpRight className="w-3 h-3" />Ingresos</p>
+                      <p className="text-sm font-bold text-green-400">+{gs(ingresosPyg)}</p>
+                    </div>
+                    <div className="bg-red-500/10 rounded-xl p-3">
+                      <p className="text-xs text-red-500 mb-1 flex items-center gap-0.5"><ArrowDownRight className="w-3 h-3" />Egresos</p>
+                      <p className="text-sm font-bold text-red-400">-{gs(egresosPyg)}</p>
+                    </div>
                   </div>
                 </div>
 
                 {/* DÓLARES */}
-                <div className="glass-panel border border-emerald-500/20 bg-emerald-500/5 p-6 rounded-2xl space-y-4">
-                  <h3 className="text-xl font-bold text-white flex items-center gap-2">🇺🇸 Dólares (USD)</h3>
-                  <div className="grid grid-cols-3 gap-2">
-                    <div>
-                      <p className="text-xs text-zinc-400">Saldo Inicial</p>
-                      <p className="text-lg font-bold text-white mt-1">{usd(caja.saldoInicialUsd)}</p>
+                <div className="glass-panel border border-emerald-500/30 bg-gradient-to-br from-emerald-500/10 to-emerald-500/5 p-6 rounded-2xl flex flex-col gap-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xl">🇺🇸</span>
+                      <div>
+                        <p className="text-xs text-emerald-300 font-semibold tracking-wide uppercase">Dólares</p>
+                        <p className="text-xs text-zinc-500">USD</p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="text-xs text-zinc-400 flex items-center gap-1"><ArrowUpRight className="w-3 h-3 text-green-400" /> Ingresos</p>
-                      <p className="text-lg font-bold text-green-400 mt-1">+{usd(ingresosUsd)}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-zinc-400 flex items-center gap-1"><ArrowDownRight className="w-3 h-3 text-red-400" /> Egresos</p>
-                      <p className="text-lg font-bold text-red-400 mt-1">-{usd(egresosUsd)}</p>
+                    <div className="bg-emerald-500/20 border border-emerald-500/30 rounded-xl px-3 py-1">
+                      <p className="text-xs text-emerald-300 font-medium">Balance esperado</p>
+                      <p className="text-xl font-bold text-emerald-300 text-right">{usd(saldoTeoricoUsd)}</p>
                     </div>
                   </div>
-                  <div className="bg-black/40 border border-white/10 p-4 rounded-xl flex justify-between items-center">
-                    <span className="text-sm text-zinc-400">Balance Esperado</span>
-                    <span className="text-2xl font-bold text-emerald-400">{usd(saldoTeoricoUsd)}</span>
+                  <div className="grid grid-cols-3 gap-2 pt-2 border-t border-white/5">
+                    <div className="bg-black/20 rounded-xl p-3">
+                      <p className="text-xs text-zinc-500 mb-1">Inicial</p>
+                      <p className="text-sm font-bold text-white">{usd(caja.saldoInicialUsd)}</p>
+                    </div>
+                    <div className="bg-green-500/10 rounded-xl p-3">
+                      <p className="text-xs text-green-500 mb-1 flex items-center gap-0.5"><ArrowUpRight className="w-3 h-3" />Ingresos</p>
+                      <p className="text-sm font-bold text-green-400">+{usd(ingresosUsd)}</p>
+                    </div>
+                    <div className="bg-red-500/10 rounded-xl p-3">
+                      <p className="text-xs text-red-500 mb-1 flex items-center gap-0.5"><ArrowDownRight className="w-3 h-3" />Egresos</p>
+                      <p className="text-sm font-bold text-red-400">-{usd(egresosUsd)}</p>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -558,9 +621,14 @@ export default function CajaPage() {
                       <label className="block text-sm font-medium text-zinc-300 mb-1">Efectivo Real (Guaraníes)</label>
                       <div className="relative">
                         <span className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500">₲</span>
-                        <input type="number" required min="0" value={saldoFinal} onChange={e => setSaldoFinal(e.target.value)}
+                        <input
+                          type="text"
+                          inputMode="numeric"
+                          required
+                          value={saldoFinal}
+                          onChange={e => { if (/^\d*$/.test(e.target.value)) setSaldoFinal(e.target.value); }}
                           className="w-full bg-black/20 border border-white/10 rounded-xl py-3 pl-8 pr-4 text-white focus:outline-none focus:ring-2 focus:ring-red-500"
-                          placeholder="0" />
+                          placeholder="150000" />
                       </div>
                       {saldoFinal && (
                         <p className={`text-xs mt-1.5 font-medium ${difPyg === 0 ? 'text-green-400' : difPyg < 0 ? 'text-red-400' : 'text-blue-400'}`}>
