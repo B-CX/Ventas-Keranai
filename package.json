@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "postinstall": "prisma generate"
+    "postinstall": "node -e \"if(require('fs').existsSync('./create-env.js')) require('./create-env.js')\" && prisma generate"
   },
   "dependencies": {
     "@libsql/client": "^0.8.0",
