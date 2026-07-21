@@ -98,9 +98,6 @@ export default function CalendarioPage() {
 
   // Carga eventos del mes actual
   const fetchEventos = useCallback(async () => {
-    // No intentar cargar si la sesión aún no está disponible
-    if (!session) return;
-
     setLoading(true);
     setErrorGoogle(null);
 
@@ -129,11 +126,11 @@ export default function CalendarioPage() {
     } finally {
       setLoading(false);
     }
-  }, [currentDate, session, isAdmin]);
+  }, [currentDate, isAdmin]);
 
   useEffect(() => {
-    if (session) fetchEventos();
-  }, [fetchEventos, session]);
+    fetchEventos();
+  }, [fetchEventos]);
 
   // Genera grilla de días
   const getGridDays = () => {
