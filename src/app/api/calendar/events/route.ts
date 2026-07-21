@@ -141,6 +141,7 @@ export async function POST(req: NextRequest) {
       // Continuamos aunque falle Google Calendar
     }
   }
+  }
 
   try {
     const newEvent = await db.calendarEvent.create({
