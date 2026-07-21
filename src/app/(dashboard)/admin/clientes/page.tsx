@@ -396,7 +396,6 @@ export default function ClientesCRM() {
                   <label className="block text-xs font-semibold uppercase tracking-wider text-zinc-400">Nombre Completo</label>
                   <input
                     type="text" required value={nombre} onChange={(e) => setNombre(e.target.value)}
-                    disabled={!isAdmin}
                     className="mt-2 w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-2.5 text-sm text-white placeholder-zinc-600 outline-none focus:border-violet-500 disabled:opacity-70"
                   />
                 </div>

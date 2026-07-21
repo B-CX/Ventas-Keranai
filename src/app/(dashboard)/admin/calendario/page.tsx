@@ -397,7 +397,7 @@ export default function CalendarioPage() {
       </div>
 
       {/* Alerta de no sincronizado */}
-      {errorGoogle && (
+      {errorGoogle && isAdmin && (
         <div className="mb-6 rounded-2xl border border-amber-500/30 bg-amber-500/10 p-5 text-sm text-amber-300 flex flex-col gap-4">
           <div className="flex items-center gap-2">
             <AlertTriangle className="h-5 w-5 shrink-0" />
