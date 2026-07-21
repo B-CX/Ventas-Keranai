@@ -35,8 +35,18 @@ export async function GET(req: NextRequest) {
   const timeMin = req.nextUrl.searchParams.get('timeMin') || new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
   const timeMax = req.nextUrl.searchParams.get('timeMax') || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
 
-  const userId = (session.user as any).id;
-  const oauth2Client = await getGoogleOAuth2Client(userId);
+  const currentUserId = (session.user as any).id;
+  const isAdmin = (session.user as any).role === 'ADMIN';
+
+  // Para verificar si Google Calendar está conectado, siempre usamos el token del Admin.
+  // El Vendedor no tiene token propio, y no debe romper la respuesta por eso.
+  let googleUserId = currentUserId;
+  if (!isAdmin) {
+    // Buscar cualquier usuario Admin que tenga token de Google
+    const adminToken = await db.calendarToken.findFirst();
+    if (adminToken) googleUserId = adminToken.userId;
+  }
+  const oauth2Client = await getGoogleOAuth2Client(googleUserId);
 
   try {
     const eventos = await db.calendarEvent.findMany({
@@ -63,7 +73,8 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({
       events: mappedEvents,
-      isGoogleConnected: !!oauth2Client
+      // Solo reportar estado de Google al Admin; para Vendedor no es relevante
+      isGoogleConnected: isAdmin ? !!oauth2Client : true,
     });
   } catch (err: any) {
     console.error('Error fetching calendar events:', err);

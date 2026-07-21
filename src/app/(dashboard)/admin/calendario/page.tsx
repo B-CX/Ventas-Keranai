@@ -98,6 +98,9 @@ export default function CalendarioPage() {
 
   // Carga eventos del mes actual
   const fetchEventos = useCallback(async () => {
+    // No intentar cargar si la sesión aún no está disponible
+    if (!session) return;
+
     setLoading(true);
     setErrorGoogle(null);
 
@@ -114,22 +117,23 @@ export default function CalendarioPage() {
         throw new Error(data.error || 'Error al cargar eventos.');
       } else {
         setEventos(data.events || []);
-        if (!data.isGoogleConnected) {
+        // Solo mostrar aviso de Google al Admin; para Vendedor no aplica
+        if (isAdmin && !data.isGoogleConnected) {
           setErrorGoogle('Google Calendar no está conectado.');
         } else {
           setErrorGoogle(null);
         }
       }
     } catch {
-      showToast('err', 'Error al sincronizar con Google Calendar.');
+      showToast('err', 'Error al cargar eventos del calendario.');
     } finally {
       setLoading(false);
     }
-  }, [currentDate]);
+  }, [currentDate, session, isAdmin]);
 
   useEffect(() => {
-    fetchEventos();
-  }, [fetchEventos]);
+    if (session) fetchEventos();
+  }, [fetchEventos, session]);
 
   // Genera grilla de días
   const getGridDays = () => {

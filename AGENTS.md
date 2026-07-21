@@ -27,6 +27,7 @@ This version has breaking changes — APIs, conventions, and file structure may 
 ## Flujo de Trabajo: Despliegue Seguro a Hostinger (hPanel)
 Cuando el usuario pida "desplegar", "actualizar en Hostinger", o arreglar bugs de producción en Hostinger, NO subas archivos `.env.production` directamente en un `.zip` ni hagas commit de credenciales a GitHub (el repo es público). El sistema de Hostinger bloqueará la compilación si encuentra contraseñas comprimidas.
 Sigue estrictamente este flujo para evadir el bloqueo:
+0. CRÍTICO: Pídele siempre al usuario las variables de entorno configuradas en Vercel (ej. `AUTH_GOOGLE_ID`, `NEXTAUTH_SECRET`, APIs externas) o lee el `.env` local para garantizar que incluyas absolutamente TODAS las credenciales.
 1. Crea un script temporal local `create-env.js` que utilice `fs.writeFileSync` para generar el archivo `.env.production` y `.env` con las variables y contraseñas necesarias.
 2. Modifica temporalmente el `package.json` agregando `node create-env.js && ` al inicio del script `postinstall`.
 3. Crea un archivo ZIP llamado `hostinger-deploy-auto.zip` usando `git archive` que contenga estas modificaciones temporales, por ejemplo:
@@ -70,3 +71,7 @@ Sigue estrictamente este flujo para evadir el bloqueo:
 - Cuando se solicite dar acceso a un rol inferior (ej. `VENDEDOR`) a una vista de `ADMIN` "solo para ver":
   1. **Frontend (Degradación Elegante):** La UI debe reutilizar el mismo componente, pero deshabilitando los `inputs` (`disabled={!isAdmin}`) y ocultando los botones de acción (Crear/Editar/Eliminar).
   2. **Backend (Seguridad Estricta):** El endpoint de lectura (`GET`) debe permitir el acceso, pero los endpoints de mutación (`POST`, `PUT`, `DELETE`) deben verificar explícitamente el rol y retornar `401 No autorizado` si no es Admin.
+
+## Estándar de Código: Next.js App Router y NextAuth
+- **Antipatrón Crítico:** Llamar a `await auth();` dentro de un bloque `try / catch` en un API Route (`route.ts`). NextAuth lanza un `DynamicServerError` que, si es atrapado, hace que Next.js compile la ruta de forma estática como un error 500. Esto rompe la app en Producción.
+- **Solución Obligatoria:** Todos los archivos `route.ts` que usen datos dinámicos, bases de datos o `auth()`, DEBEN incluir la directiva `export const dynamic = 'force-dynamic';` al inicio del archivo.

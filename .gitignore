@@ -46,3 +46,11 @@ next-env.d.ts
 
 # Data export (contains sensitive user/customer data)
 prisma/data-export.json
+
+# Deployment helper scripts (contain secrets, should never be committed)
+create-env.js
+add-dynamic.js
+make-zip.bat
+hostinger-deploy-auto.zip
+hostinger-deploy-fixed.zip
+hostinger-deploy.zip
