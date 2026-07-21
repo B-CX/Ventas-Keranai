@@ -67,10 +67,13 @@ Sigue estrictamente este flujo para evadir el bloqueo:
 - Nunca diseñes una funcionalidad core de la aplicación (como el Calendario) dependiendo 100% de una API externa (ej. Google, APIs de terceros) sin un "fallback" local.
 - **Regla:** Todos los datos deben guardarse prioritariamente en la base de datos propia (Turso/SQLite). Las integraciones externas deben tratarse como complementos de sincronización opcionales (sincronización en segundo plano). Si la API externa falla o no está conectada, la aplicación debe seguir funcionando con los datos locales.
 
-## Estándar de Seguridad: Control de Accesos (RBAC) y UI Degradable
-- Cuando se solicite dar acceso a un rol inferior (ej. `VENDEDOR`) a una vista de `ADMIN` "solo para ver":
-  1. **Frontend (Degradación Elegante):** La UI debe reutilizar el mismo componente, pero deshabilitando los `inputs` (`disabled={!isAdmin}`) y ocultando los botones de acción (Crear/Editar/Eliminar).
-  2. **Backend (Seguridad Estricta):** El endpoint de lectura (`GET`) debe permitir el acceso, pero los endpoints de mutación (`POST`, `PUT`, `DELETE`) deben verificar explícitamente el rol y retornar `401 No autorizado` si no es Admin.
+## Estándar de Arquitectura: Separación de Vistas por Rol
+- **Antipatrón Crítico:** Reutilizar la misma página (ej. `/admin/recurso`) para `ADMIN` y `VENDEDOR` utilizando condicionales de renderizado como `if (isAdmin)` para ocultar componentes. Esto causa "saltos" en la UI y errores de hidratación/crashes fatales en Hostinger al evaluar el estado de carga de la sesión (`useSession`).
+- **Solución Obligatoria:** Las vistas con diferencias sustanciales entre roles deben separarse en rutas distintas (ej. `/admin/calendario` y `/venta/calendario`). Los componentes de UI de cada ruta deben ser limpios y sin condicionales de sesión.
+
+## Regla de Negocio: Permisos de Calendario y Google Sync
+- Los usuarios con rol `VENDEDOR` tienen acceso completo (CRUD) para agendar, editar y eliminar eventos en el Calendario.
+- **Sincronización:** Sin embargo, la integración con la API de Google Calendar está **estrictamente reservada** para el rol `ADMIN`. Los eventos creados por un `VENDEDOR` deben guardarse únicamente de manera interna en la base de datos (Turso) sin invocar a Google.
 
 ## Estándar de Código: Next.js App Router y NextAuth
 - **Antipatrón Crítico:** Llamar a `await auth();` dentro de un bloque `try / catch` en un API Route (`route.ts`). NextAuth lanza un `DynamicServerError` que, si es atrapado, hace que Next.js compile la ruta de forma estática como un error 500. Esto rompe la app en Producción.
