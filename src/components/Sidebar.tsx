@@ -75,7 +75,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
     { name: 'Nueva Venta', href: '/venta', icon: ShoppingBag },
     { name: 'Consultar Stock', href: '/admin/productos', icon: Package },
     { name: 'Clientes', href: '/admin/clientes', icon: Users },
-    { name: 'Calendario', href: '/admin/calendario', icon: CalendarDays },
+    { name: 'Calendario', href: '/venta/calendario', icon: CalendarDays },
     { name: 'Configuraciones', href: '/admin/configuracion', icon: Settings },
   ];
 
