@@ -111,13 +111,14 @@ export default function CalendarioPage() {
       const data = await res.json();
       
       if (!res.ok) {
-        if (res.status === 403) {
-          setErrorGoogle(data.error || 'No conectado a Google Calendar.');
-        } else {
-          throw new Error(data.error || 'Error al cargar eventos.');
-        }
+        throw new Error(data.error || 'Error al cargar eventos.');
       } else {
-        setEventos(data);
+        setEventos(data.events || []);
+        if (!data.isGoogleConnected) {
+          setErrorGoogle('Google Calendar no está conectado.');
+        } else {
+          setErrorGoogle(null);
+        }
       }
     } catch {
       showToast('err', 'Error al sincronizar con Google Calendar.');

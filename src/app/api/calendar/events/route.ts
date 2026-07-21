@@ -27,49 +27,43 @@ const GOOGLE_COLOR_MAPPING: Record<string, string> = {
 // GET /api/calendar/events - list events
 export async function GET(req: NextRequest) {
   const session = await auth();
-  if (!session || (session.user as any)?.role !== 'ADMIN') {
+  if (!session) {
     return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
   }
+
+  const timeMin = req.nextUrl.searchParams.get('timeMin') || new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+  const timeMax = req.nextUrl.searchParams.get('timeMax') || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
 
   const userId = (session.user as any).id;
   const oauth2Client = await getGoogleOAuth2Client(userId);
 
-  if (!oauth2Client) {
-    return NextResponse.json(
-      { error: 'No conectado a Google Calendar. Inicia sesión con Google.' },
-      { status: 403 }
-    );
-  }
-
-  const calendar = google.calendar({ version: 'v3', auth: oauth2Client });
-  
-  const timeMin = req.nextUrl.searchParams.get('timeMin') || new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
-  const timeMax = req.nextUrl.searchParams.get('timeMax') || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
-
   try {
-    const response = await calendar.events.list({
-      calendarId: 'primary',
-      timeMin,
-      timeMax,
-      singleEvents: true,
-      orderBy: 'startTime',
+    const eventos = await db.calendarEvent.findMany({
+      where: {
+        start: { lte: timeMax },
+        end: { gte: timeMin },
+      },
+      orderBy: {
+        start: 'asc'
+      }
     });
 
-    const events = (response.data.items || []).map((evt) => {
-      const isAllDay = !!evt.start?.date;
-      return {
-        id: evt.id,
-        nombre: evt.summary || 'Sin título',
-        descripcion: evt.description || '',
-        color: GOOGLE_COLOR_MAPPING[evt.colorId || ''] || 'violeta',
-        start: isAllDay ? evt.start?.date : evt.start?.dateTime,
-        end: isAllDay ? evt.end?.date : evt.end?.dateTime,
-        todoElDia: isAllDay,
-        recordatorio: !!evt.reminders?.useDefault || (evt.reminders?.overrides && evt.reminders.overrides.length > 0),
-      };
-    });
+    const mappedEvents = eventos.map((evt) => ({
+      id: evt.id,
+      nombre: evt.titulo,
+      descripcion: evt.descripcion || '',
+      color: evt.color,
+      start: evt.start,
+      end: evt.end,
+      todoElDia: evt.todoElDia,
+      recordatorio: evt.recordatorio,
+      googleId: evt.googleId,
+    }));
 
-    return NextResponse.json(events);
+    return NextResponse.json({
+      events: mappedEvents,
+      isGoogleConnected: !!oauth2Client
+    });
   } catch (err: any) {
     console.error('Error fetching calendar events:', err);
     return NextResponse.json({ error: err.message }, { status: 500 });
@@ -83,17 +77,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
   }
 
-  const userId = (session.user as any).id;
-  const oauth2Client = await getGoogleOAuth2Client(userId);
-
-  if (!oauth2Client) {
-    return NextResponse.json(
-      { error: 'No conectado a Google Calendar.' },
-      { status: 403 }
-    );
-  }
-
-  const calendar = google.calendar({ version: 'v3', auth: oauth2Client });
   const body = await req.json();
   const { nombre, descripcion, color, start, end, todoElDia, recordatorio } = body;
 
@@ -101,40 +84,62 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Faltan campos requeridos.' }, { status: 400 });
   }
 
-  const googleEvent: any = {
-    summary: nombre,
-    description: descripcion || '',
-    colorId: COLOR_MAPPING[color] || undefined,
-    start: todoElDia
-      ? { date: start.split('T')[0] }
-      : { dateTime: start, timeZone: 'America/Asuncion' },
-    end: todoElDia
-      ? { date: end.split('T')[0] }
-      : { dateTime: end, timeZone: 'America/Asuncion' },
-  };
+  const userId = (session.user as any).id;
+  const oauth2Client = await getGoogleOAuth2Client(userId);
+  let googleEventId = null;
 
-  if (recordatorio) {
-    googleEvent.reminders = {
-      useDefault: false,
-      overrides: [
-        { method: 'popup', minutes: 30 },
-      ],
-    };
-  } else {
-    googleEvent.reminders = {
-      useDefault: false,
-      overrides: [],
-    };
+  if (oauth2Client) {
+    try {
+      const calendar = google.calendar({ version: 'v3', auth: oauth2Client });
+      const googleEvent: any = {
+        summary: nombre,
+        description: descripcion || '',
+        colorId: COLOR_MAPPING[color] || undefined,
+        start: todoElDia
+          ? { date: start.split('T')[0] }
+          : { dateTime: start, timeZone: 'America/Asuncion' },
+        end: todoElDia
+          ? { date: end.split('T')[0] }
+          : { dateTime: end, timeZone: 'America/Asuncion' },
+      };
+
+      if (recordatorio) {
+        googleEvent.reminders = {
+          useDefault: false,
+          overrides: [{ method: 'popup', minutes: 30 }],
+        };
+      } else {
+        googleEvent.reminders = {
+          useDefault: false,
+          overrides: [],
+        };
+      }
+
+      const response = await calendar.events.insert({
+        calendarId: 'primary',
+        requestBody: googleEvent,
+      });
+
+      googleEventId = response.data.id;
+    } catch (err) {
+      console.error('Error syncing with Google Calendar on POST:', err);
+      // Continuamos aunque falle Google Calendar
+    }
   }
 
   try {
-    const response = await calendar.events.insert({
-      calendarId: 'primary',
-      requestBody: googleEvent,
+    const newEvent = await db.calendarEvent.create({
+      data: {
+        titulo: nombre,
+        descripcion: descripcion || '',
+        color: color || 'violeta',
+        start,
+        end,
+        todoElDia: !!todoElDia,
+        recordatorio: !!recordatorio,
+        googleId: googleEventId,
+      }
     });
-
-    const evt = response.data;
-    const isAllDay = !!evt.start?.date;
 
     // Crear notificación de calendario
     await db.notificacion.create({
@@ -147,14 +152,15 @@ export async function POST(req: NextRequest) {
     });
 
     return NextResponse.json({
-      id: evt.id,
-      nombre: evt.summary,
-      descripcion: evt.description || '',
-      color: GOOGLE_COLOR_MAPPING[evt.colorId || ''] || 'violeta',
-      start: isAllDay ? evt.start?.date : evt.start?.dateTime,
-      end: isAllDay ? evt.end?.date : evt.end?.dateTime,
-      todoElDia: isAllDay,
-      recordatorio,
+      id: newEvent.id,
+      nombre: newEvent.titulo,
+      descripcion: newEvent.descripcion || '',
+      color: newEvent.color,
+      start: newEvent.start,
+      end: newEvent.end,
+      todoElDia: newEvent.todoElDia,
+      recordatorio: newEvent.recordatorio,
+      googleId: newEvent.googleId,
     });
   } catch (err: any) {
     console.error('Error creating calendar event:', err);

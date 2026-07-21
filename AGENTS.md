@@ -50,9 +50,23 @@ Sigue estrictamente este flujo para evadir el bloqueo:
 
 ## Flujo de Trabajo: Migraciones en Producción (Turso)
 - **Desincronización:** Cada vez que modifiques el archivo `schema.prisma` (agregar columnas o tablas), recuerda que ejecutar `npx prisma db push` **solo actualizará la base de datos local `dev.db`**.
-- **Protocolo de Sincronización:** Para evitar errores 500 en Vercel y Hostinger, SIEMPRE debes actualizar la base de datos de Turso manualmente.
-- **Solución:** Crea un script temporal de Node.js que lea `TURSO_DATABASE_URL` y `TURSO_AUTH_TOKEN` desde `.env.production`, se conecte usando `@libsql/client`, y ejecute las sentencias SQL en bruto (`CREATE TABLE`, `ALTER TABLE`) necesarias para que la base de datos de la nube refleje los cambios locales.
+- **Protocolo de Sincronización:** Para evitar errores 500 en Vercel y Hostinger, SIEMPRE debes actualizar la base de datos de Turso manualmente y **nunca escribas el SQL de memoria**.
+- **Solución Estricta:** 
+  1. Utiliza Prisma para generar el SQL exacto del parche ejecutando este comando:
+     `npx prisma migrate diff --from-url file:./dev.db --to-schema-datamodel prisma/schema.prisma --script`
+  2. Copia exactamente el código SQL que te devuelve ese comando.
+  3. Crea un script temporal de Node.js que lea `TURSO_DATABASE_URL` y `TURSO_AUTH_TOKEN` desde `.env.production` y use `@libsql/client` para ejecutar el SQL generado mediante `client.executeMultiple()` (o comandos individuales).
+  4. Ejecuta el script y luego bórralo.
 
 ## Estándar de Código: Componentes de React
 - **Antipatrón Crítico:** NUNCA definas un componente de React dentro del cuerpo de otro componente de React. Esto causa que el componente interno se desmonte y vuelva a montar en cada renderizado del padre, provocando la pérdida de foco en inputs y un rendimiento terrible.
 - **Solución Obligatoria:** Todos los componentes hijos (por ejemplo, sub-componentes como celdas de tablas, modales o filas) deben definirse a nivel de módulo (fuera de la función principal) o en su propio archivo, y deben recibir toda la data o callbacks que necesiten a través de `props`.
+
+## Estándar de Arquitectura: Resiliencia ante APIs Externas
+- Nunca diseñes una funcionalidad core de la aplicación (como el Calendario) dependiendo 100% de una API externa (ej. Google, APIs de terceros) sin un "fallback" local.
+- **Regla:** Todos los datos deben guardarse prioritariamente en la base de datos propia (Turso/SQLite). Las integraciones externas deben tratarse como complementos de sincronización opcionales (sincronización en segundo plano). Si la API externa falla o no está conectada, la aplicación debe seguir funcionando con los datos locales.
+
+## Estándar de Seguridad: Control de Accesos (RBAC) y UI Degradable
+- Cuando se solicite dar acceso a un rol inferior (ej. `VENDEDOR`) a una vista de `ADMIN` "solo para ver":
+  1. **Frontend (Degradación Elegante):** La UI debe reutilizar el mismo componente, pero deshabilitando los `inputs` (`disabled={!isAdmin}`) y ocultando los botones de acción (Crear/Editar/Eliminar).
+  2. **Backend (Seguridad Estricta):** El endpoint de lectura (`GET`) debe permitir el acceso, pero los endpoints de mutación (`POST`, `PUT`, `DELETE`) deben verificar explícitamente el rol y retornar `401 No autorizado` si no es Admin.
