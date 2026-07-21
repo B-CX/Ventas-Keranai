@@ -88,12 +88,12 @@ export default function LoginPage() {
                 <path d="M12,7.08a4.91,4.91,0,0,1,3.48,1.37l2.6-2.6A8.77,8.77,0,0,0,12,3.6,9,9,0,0,0,4.85,8.46L7.25,10.26A5.27,5.27,0,0,1,12,7.08Z" fill="#ea4335" />
               </g>
             </svg>
-            Ingresar con Google
+            Acceso Administrador (Google)
           </button>
 
           <div className="relative flex py-2 items-center">
             <div className="flex-grow border-t border-white/10"></div>
-            <span className="flex-shrink mx-4 text-zinc-500 text-xs uppercase font-medium">O usar correo</span>
+            <span className="flex-shrink mx-4 text-zinc-500 text-xs uppercase font-medium">Acceso Vendedores (Correo)</span>
             <div className="flex-grow border-t border-white/10"></div>
           </div>
 
@@ -128,7 +128,7 @@ export default function LoginPage() {
               {loading ? (
                 <div className="h-5 w-5 animate-spin rounded-full border-2 border-white border-t-transparent" />
               ) : (
-                'Iniciar Sesión con Correo'
+                'Iniciar Sesión (Vendedor)'
               )}
             </button>
           </form>
