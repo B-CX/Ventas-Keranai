@@ -43,3 +43,16 @@ Sigue estrictamente este flujo para evadir el bloqueo:
 - Todas las imágenes subidas por el usuario (Fotos de perfil, Logos, Productos, Clientes) deben procesarse de forma estricta en el cliente (frontend) antes de enviarse al servidor.
 - **Formato obligatorio:** Usar un `canvas` en JavaScript para redimensionar la imagen a un máximo de `1024x1024` píxeles, recortarla en una proporción cuadrada (`1:1`) centrándola, y finalmente exportarla a `Base64` como `image/webp` con un 85% de calidad (`0.85`).
 - Esto garantiza que la base de datos SQLite no colapse por el peso excesivo de archivos originales.
+
+## Estándar de UI: Visualización de Imágenes (Lightbox)
+- Siempre que se listen imágenes en miniatura o avatares de perfil en la aplicación (tablas, listas, perfiles), se debe implementar la capacidad de ampliar la imagen a su tamaño original.
+- **Comportamiento:** Al hacer clic en la miniatura, la imagen debe abrirse en un componente superpuesto (Lightbox) centrado, con un fondo oscuro y difuminado (`backdrop-blur`), permitiendo cerrarlo al hacer clic fuera de la imagen o en un botón 'X'.
+
+## Flujo de Trabajo: Migraciones en Producción (Turso)
+- **Desincronización:** Cada vez que modifiques el archivo `schema.prisma` (agregar columnas o tablas), recuerda que ejecutar `npx prisma db push` **solo actualizará la base de datos local `dev.db`**.
+- **Protocolo de Sincronización:** Para evitar errores 500 en Vercel y Hostinger, SIEMPRE debes actualizar la base de datos de Turso manualmente.
+- **Solución:** Crea un script temporal de Node.js que lea `TURSO_DATABASE_URL` y `TURSO_AUTH_TOKEN` desde `.env.production`, se conecte usando `@libsql/client`, y ejecute las sentencias SQL en bruto (`CREATE TABLE`, `ALTER TABLE`) necesarias para que la base de datos de la nube refleje los cambios locales.
+
+## Estándar de Código: Componentes de React
+- **Antipatrón Crítico:** NUNCA definas un componente de React dentro del cuerpo de otro componente de React. Esto causa que el componente interno se desmonte y vuelva a montar en cada renderizado del padre, provocando la pérdida de foco en inputs y un rendimiento terrible.
+- **Solución Obligatoria:** Todos los componentes hijos (por ejemplo, sub-componentes como celdas de tablas, modales o filas) deben definirse a nivel de módulo (fuera de la función principal) o en su propio archivo, y deben recibir toda la data o callbacks que necesiten a través de `props`.

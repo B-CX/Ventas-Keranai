@@ -113,22 +113,49 @@ model VentaItem {
   precio     Float // precio al momento de la venta
 }
 
+model PrecioLista {
+  id          String        @id @default(cuid())
+  nombre      String        @unique
+  descripcion String?
+  tipo        String        @default("GENERICA") // "PRODUCTOS" | "SERVICIOS" | "GENERICA"
+  orden       Int           @default(0)
+  items       PrecioItem[]
+  grupos      PrecioGrupo[]
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+}
+
+model PrecioGrupo {
+  id       String       @id @default(cuid())
+  listaId  String
+  lista    PrecioLista  @relation(fields: [listaId], references: [id], onDelete: Cascade)
+  nombre   String
+  orden    Int          @default(0)
+  items    PrecioItem[]
+  createdAt DateTime   @default(now())
+}
+
 model PrecioItem {
-  id        String   @id @default(cuid())
-  lista     String // "PRODUCTOS" | "SERVICIOS"
+  id        String       @id @default(cuid())
+  lista     String       // legacy: "PRODUCTOS" | "SERVICIOS" | listaId for new lists
+  listaId   String?      // FK to PrecioLista (null for legacy items)
+  precioLista PrecioLista? @relation(fields: [listaId], references: [id], onDelete: Cascade)
+  grupoId   String?      // FK to PrecioGrupo
+  grupo     PrecioGrupo? @relation(fields: [grupoId], references: [id], onDelete: SetNull)
   nombre    String
-  precio    Float    @default(0) // precio de venta
-  moneda    String   @default("PYG") // "PYG" | "USD"
+  precio    Float        @default(0) // precio de venta
+  moneda    String       @default("PYG") // "PYG" | "USD"
   cantidad  Float?
-  costoGs   Float? // costo en guaraníes (solo PRODUCTOS)
-  costoUsd  Float? // costo en USD (solo PRODUCTOS)
-  lugar     String? // lugar de compra (solo PRODUCTOS)
-  agotado   Boolean  @default(false)
-  pendiente String? // pendientes (solo SERVICIOS)
-  orden     Int      @default(0)
-  montoUsd  Float    @default(0)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  costoGs   Float?       // costo en guaraníes (solo PRODUCTOS)
+  costoUsd  Float?       // costo en USD (solo PRODUCTOS)
+  lugar     String?      // lugar de compra (solo PRODUCTOS)
+  agotado   Boolean      @default(false)
+  pendiente String?      // pendientes (solo SERVICIOS)
+  notas     String?      // para listas genéricas
+  orden     Int          @default(0)
+  montoUsd  Float        @default(0)
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
 }
 
 model Notificacion {
