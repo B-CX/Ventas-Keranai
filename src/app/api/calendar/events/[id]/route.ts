@@ -26,7 +26,7 @@ const GOOGLE_COLOR_MAPPING: Record<string, string> = {
 // PUT /api/calendar/events/[id] - update event
 export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
   const session = await auth();
-  if (!session || (session.user as any)?.role !== 'ADMIN') {
+  if (!session) {
     return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
   }
 
@@ -43,9 +43,11 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     }
 
     const userId = (session.user as any).id;
-    const oauth2Client = await getGoogleOAuth2Client(userId);
-
-    if (oauth2Client && currentEvent.googleId) {
+    const isAdmin = (session.user as any)?.role === 'ADMIN';
+    
+    if (isAdmin) {
+      const oauth2Client = await getGoogleOAuth2Client(userId);
+      if (oauth2Client && currentEvent.googleId) {
       try {
         const calendar = google.calendar({ version: 'v3', auth: oauth2Client });
         const googleEvent: any = {
@@ -81,6 +83,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
         console.error('Error updating Google Calendar event:', err);
       }
     }
+  }
 
     const updatedEvent = await db.calendarEvent.update({
       where: { id: params.id },
@@ -115,7 +118,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
 // DELETE /api/calendar/events/[id] - delete event
 export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
   const session = await auth();
-  if (!session || (session.user as any)?.role !== 'ADMIN') {
+  if (!session) {
     return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
   }
 
@@ -129,9 +132,11 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
     }
 
     const userId = (session.user as any).id;
-    const oauth2Client = await getGoogleOAuth2Client(userId);
+    const isAdmin = (session.user as any)?.role === 'ADMIN';
 
-    if (oauth2Client && currentEvent.googleId) {
+    if (isAdmin) {
+      const oauth2Client = await getGoogleOAuth2Client(userId);
+      if (oauth2Client && currentEvent.googleId) {
       try {
         const calendar = google.calendar({ version: 'v3', auth: oauth2Client });
         await calendar.events.delete({
@@ -142,6 +147,7 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
         console.error('Error deleting Google Calendar event:', err);
       }
     }
+  }
 
     await db.calendarEvent.delete({
       where: { id: params.id }

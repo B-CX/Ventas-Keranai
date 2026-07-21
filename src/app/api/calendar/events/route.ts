@@ -85,7 +85,7 @@ export async function GET(req: NextRequest) {
 // POST /api/calendar/events - create event
 export async function POST(req: NextRequest) {
   const session = await auth();
-  if (!session || (session.user as any)?.role !== 'ADMIN') {
+  if (!session) {
     return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
   }
 
@@ -97,10 +97,13 @@ export async function POST(req: NextRequest) {
   }
 
   const userId = (session.user as any).id;
-  const oauth2Client = await getGoogleOAuth2Client(userId);
+  const isAdmin = (session.user as any)?.role === 'ADMIN';
   let googleEventId = null;
 
-  if (oauth2Client) {
+  // Solo los Admins sincronizan con Google Calendar
+  if (isAdmin) {
+    const oauth2Client = await getGoogleOAuth2Client(userId);
+    if (oauth2Client) {
     try {
       const calendar = google.calendar({ version: 'v3', auth: oauth2Client });
       const googleEvent: any = {
