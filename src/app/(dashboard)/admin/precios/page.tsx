@@ -740,7 +740,7 @@ export default function PreciosPage() {
               <AlertTriangle className="h-6 w-6 shrink-0" />
               <h3 className="text-lg font-bold">Eliminar lista</h3>
             </div>
-            <p className="text-sm text-zinc-400 mb-6">Se eliminarán <strong className="text-white">todos los ítems</strong> de <span className="text-violet-400">"{listaActiva?.nombre}"</span>. Esta acción no se puede deshacer.</p>
+            <p className="text-sm text-zinc-400 mb-6">Se eliminarán <strong className="text-white">todos los ítems</strong> de <span className="text-violet-400">&quot;{listaActiva?.nombre}&quot;</span>. Esta acción no se puede deshacer.</p>
             <div className="flex justify-end gap-3">
               <button onClick={() => setShowDeleteConfirm(false)} className="rounded-xl border border-white/10 px-4 py-2 text-sm text-zinc-400 hover:bg-white/5">Cancelar</button>
               <button onClick={deleteLista} className="rounded-xl bg-red-600 px-5 py-2 text-sm font-semibold text-white hover:bg-red-500">Eliminar</button>
