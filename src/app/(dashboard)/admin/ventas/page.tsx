@@ -20,12 +20,12 @@ interface VentaItem {
   id: string;
   cantidad: number;
   precio: number;
-  variante: {
+  variante?: {
     nombre: string;
-    producto: {
+    producto?: {
       nombre: string;
     };
-  };
+  } | null;
 }
 
 interface Venta {
@@ -386,11 +386,13 @@ export default function VentasPage() {
                     >
                       <div>
                         <p className="font-semibold text-white">
-                          {item.variante.producto.nombre}
+                          {item.variante?.producto?.nombre || 'Producto eliminado'}
                         </p>
-                        <p className="text-[10px] text-zinc-400 mt-0.5">
-                          Variante: {item.variante.nombre}
-                        </p>
+                        {item.variante?.nombre && (
+                          <p className="text-[10px] text-zinc-400 mt-0.5">
+                            Variante: {item.variante.nombre}
+                          </p>
+                        )}
                       </div>
                       <div className="text-right shrink-0">
                         <p className="font-semibold text-zinc-200">

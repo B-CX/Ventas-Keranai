@@ -43,19 +43,20 @@ export async function PUT(
 
   try {
     const { id } = await params;
-    const { nombre, descripcion, categoria, activo, imagen, variantes } = await req.json();
+    const body = await req.json();
+    const { nombre, descripcion, categoriaId, activo, imagen, variantes } = body;
 
     if (!nombre) {
       return NextResponse.json({ error: 'El nombre es obligatorio' }, { status: 400 });
     }
 
     // 1. Actualizar datos básicos del producto
-    const updatedProducto = await db.producto.update({
+    await db.producto.update({
       where: { id },
       data: {
         nombre,
-        descripcion,
-        categoria,
+        descripcion: descripcion || null,
+        categoriaId: categoriaId || null,
         activo: activo !== undefined ? activo : true,
         imagen: imagen !== undefined ? imagen : undefined,
       },
@@ -107,7 +108,7 @@ export async function PUT(
 
     const finalProduct = await db.producto.findUnique({
       where: { id },
-      include: { variantes: true },
+      include: { variantes: true, categoria: { include: { grupo: true } } },
     });
 
     return NextResponse.json(finalProduct);
@@ -129,23 +130,8 @@ export async function DELETE(
   try {
     const { id } = await params;
 
-    // Verificar si hay ventas que dependan de alguna variante de este producto
-    const itemsCount = await db.ventaItem.count({
-      where: {
-        variante: {
-          productoId: id,
-        },
-      },
-    });
-
-    if (itemsCount > 0) {
-      // Si ya tiene ventas, en lugar de eliminar, sugerimos desactivarlo
-      return NextResponse.json(
-        { error: 'No se puede eliminar el producto porque tiene ventas asociadas. Podés desactivarlo.' },
-        { status: 400 }
-      );
-    }
-
+    // Se elimina el producto directamente. Si existen ventas asociadas a sus variantes,
+    // varianteId se establecerá en NULL (SetNull) preservando el registro e historial de la venta.
     await db.producto.delete({
       where: { id },
     });

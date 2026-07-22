@@ -80,8 +80,8 @@ export default async function TicketPage({ params }: { params: { id: string } })
               <tr key={item.id}>
                 <td className="py-1 align-top">{item.cantidad}x</td>
                 <td className="py-1 pr-2">
-                  {item.variante.producto.nombre} <br/>
-                  <span className="text-[10px]">{item.variante.nombre}</span>
+                  {item.variante?.producto?.nombre || 'Producto eliminado'} <br/>
+                  {item.variante?.nombre && <span className="text-[10px]">{item.variante.nombre}</span>}
                 </td>
                 <td className="py-1 text-right align-top">
                   ${(item.precio * item.cantidad).toLocaleString('es-AR')}

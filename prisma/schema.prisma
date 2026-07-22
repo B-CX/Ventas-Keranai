@@ -104,11 +104,11 @@ model Venta {
 }
 
 model VentaItem {
-  id         String   @id @default(cuid())
+  id         String    @id @default(cuid())
   ventaId    String
-  venta      Venta    @relation(fields: [ventaId], references: [id], onDelete: Cascade)
-  varianteId String
-  variante   Variante @relation(fields: [varianteId], references: [id])
+  venta      Venta     @relation(fields: [ventaId], references: [id], onDelete: Cascade)
+  varianteId String?
+  variante   Variante? @relation(fields: [varianteId], references: [id], onDelete: SetNull)
   cantidad   Int
   precio     Float // precio al momento de la venta
 }
@@ -259,11 +259,11 @@ model Compra {
 }
 
 model CompraItem {
-  id         String   @id @default(cuid())
+  id         String    @id @default(cuid())
   compraId   String
-  compra     Compra   @relation(fields: [compraId], references: [id], onDelete: Cascade)
-  varianteId String
-  variante   Variante @relation(fields: [varianteId], references: [id])
+  compra     Compra    @relation(fields: [compraId], references: [id], onDelete: Cascade)
+  varianteId String?
+  variante   Variante? @relation(fields: [varianteId], references: [id], onDelete: SetNull)
   cantidad   Int
   costoUnit  Float // Costo al que se compró
 }

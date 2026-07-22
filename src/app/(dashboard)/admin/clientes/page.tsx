@@ -32,12 +32,12 @@ interface VentaItem {
   id: string;
   cantidad: number;
   precio: number;
-  variante: {
+  variante?: {
     nombre: string;
-    producto: {
+    producto?: {
       nombre: string;
     };
-  };
+  } | null;
 }
 
 interface Venta {
@@ -312,7 +312,7 @@ export default function ClientesCRM() {
                         {venta.items.map((item) => (
                           <div key={item.id} className="flex justify-between items-center text-sm">
                             <span className="text-zinc-300">
-                              {item.variante.producto.nombre} <span className="text-zinc-500">({item.variante.nombre})</span> x {item.cantidad}
+                              {item.variante?.producto?.nombre || 'Producto eliminado'} {item.variante?.nombre && <span className="text-zinc-500">({item.variante.nombre})</span>} x {item.cantidad}
                             </span>
                             <span className="text-zinc-400">${(item.precio * item.cantidad).toLocaleString('es-AR')}</span>
                           </div>
