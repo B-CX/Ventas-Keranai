@@ -240,6 +240,14 @@ export default function ConfiguracionPage() {
 
   if (loading) return <div className="p-8 text-center text-zinc-400">Cargando...</div>;
 
+  if (!isAdmin) {
+    return (
+      <div className="p-8 text-center text-zinc-400">
+        No tienes permisos para acceder a las configuraciones.
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-2xl mx-auto space-y-8 pb-10">
       <div>

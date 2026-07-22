@@ -76,7 +76,6 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
     { name: 'Consultar Stock', href: '/admin/productos', icon: Package },
     { name: 'Clientes', href: '/admin/clientes', icon: Users },
     { name: 'Calendario', href: '/venta/calendario', icon: CalendarDays },
-    { name: 'Configuraciones', href: '/admin/configuracion', icon: Settings },
   ];
 
   const links = role === 'ADMIN' ? adminLinks : sellerLinks;
