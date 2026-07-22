@@ -50,14 +50,13 @@ Sigue estrictamente este flujo para evadir el bloqueo:
 - **Comportamiento:** Al hacer clic en la miniatura, la imagen debe abrirse en un componente superpuesto (Lightbox) centrado, con un fondo oscuro y difuminado (`backdrop-blur`), permitiendo cerrarlo al hacer clic fuera de la imagen o en un botón 'X'.
 
 ## Flujo de Trabajo: Migraciones en Producción (Turso)
-- **Desincronización:** Cada vez que modifiques el archivo `schema.prisma` (agregar columnas o tablas), recuerda que ejecutar `npx prisma db push` **solo actualizará la base de datos local `dev.db`**.
-- **Protocolo de Sincronización:** Para evitar errores 500 en Vercel y Hostinger, SIEMPRE debes actualizar la base de datos de Turso manualmente y **nunca escribas el SQL de memoria**.
-- **Solución Estricta:** 
-  1. Utiliza Prisma para generar el SQL exacto del parche ejecutando este comando:
-     `npx prisma migrate diff --from-url file:./dev.db --to-schema-datamodel prisma/schema.prisma --script`
-  2. Copia exactamente el código SQL que te devuelve ese comando.
-  3. Crea un script temporal de Node.js que lea `TURSO_DATABASE_URL` y `TURSO_AUTH_TOKEN` desde `.env.production` y use `@libsql/client` para ejecutar el SQL generado mediante `client.executeMultiple()` (o comandos individuales).
-  4. Ejecuta el script y luego bórralo.
+- **Desincronización:** Modificar `schema.prisma` y correr `npx prisma db push` solo actualiza `dev.db`. Si no actualizas Turso, Vercel/Hostinger fallarán (Error 500).
+- **Protocolo de Sincronización Estricto:** NUNCA escribas SQL de memoria ni uses `dev.db` para el diff si ya lo actualizaste (dará un diff vacío). Siempre extrae el estado real de Turso:
+  1. Crea un script `turso-sync.js` que se conecte a Turso (leyendo `TURSO_DATABASE_URL` y `TURSO_AUTH_TOKEN` de `.env.production`), ejecute `SELECT sql FROM sqlite_master WHERE type IN ('table', 'index') AND sql IS NOT NULL`, y guarde el resultado concatenado en `turso-schema.sql`.
+  2. Inicializa una base local temporal: crea un script `load-schema.js` usando `@libsql/client` (con `url: 'file:turso-schema.db'`) que ejecute el archivo `turso-schema.sql` mediante `client.executeMultiple()`.
+  3. Genera el script de migración exacto: `npx prisma migrate diff --from-url file:./turso-schema.db --to-schema-datamodel prisma/schema.prisma --script > turso-migration.sql`
+  4. Crea un script final `apply-turso.js` que lea `turso-migration.sql` y lo aplique a Turso con `client.executeMultiple()`.
+  5. Borra todos los archivos temporales generados.
 
 ## Estándar de Código: Componentes de React
 - **Antipatrón Crítico:** NUNCA definas un componente de React dentro del cuerpo de otro componente de React. Esto causa que el componente interno se desmonte y vuelva a montar en cada renderizado del padre, provocando la pérdida de foco en inputs y un rendimiento terrible.
