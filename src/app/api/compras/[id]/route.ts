@@ -25,14 +25,16 @@ export async function DELETE(req: Request, { params }: { params: { id: string } 
     await db.$transaction(async (tx) => {
       // Revertir el stock de cada item comprado
       for (const item of compra.items) {
-        await tx.variante.update({
-          where: { id: item.varianteId },
-          data: {
-            stock: {
-              decrement: item.cantidad
+        if (item.varianteId) {
+          await tx.variante.update({
+            where: { id: item.varianteId },
+            data: {
+              stock: {
+                decrement: item.cantidad
+              }
             }
-          }
-        });
+          });
+        }
       }
 
       // Eliminar la compra (los items se eliminan por cascade si está configurado, o Prisma lo maneja)
