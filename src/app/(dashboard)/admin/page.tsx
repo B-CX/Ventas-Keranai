@@ -81,16 +81,19 @@ export default async function AdminDashboard() {
     take: 5,
   });
   
-  const topVariantesIds = ventasPorProducto.map(v => v.varianteId);
+  const topVariantesIds = ventasPorProducto
+    .map(v => v.varianteId)
+    .filter((id): id is string => id !== null);
+
   const topVariantes = await db.variante.findMany({
     where: { id: { in: topVariantesIds } },
     include: { producto: true }
   });
   
   const productosData = ventasPorProducto.map(vp => {
-    const v = topVariantes.find(t => t.id === vp.varianteId);
+    const v = vp.varianteId ? topVariantes.find(t => t.id === vp.varianteId) : null;
     return {
-      name: v ? `${v.producto.nombre} - ${v.nombre}` : 'Desconocido',
+      name: v ? `${v.producto.nombre} - ${v.nombre}` : 'Producto eliminado',
       value: vp._sum.cantidad || 0
     };
   });
