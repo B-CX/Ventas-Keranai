@@ -56,7 +56,12 @@ export async function GET(req: Request) {
       const cliente = venta.cliente?.nombre || 'Cliente Ocasional';
       
       const productos = venta.items
-        .map((item) => `${item.variante.producto.nombre} - ${item.variante.nombre} (x${item.cantidad})`)
+        .map((item) => {
+          if (item.variante) {
+            return `${item.variante.producto.nombre} - ${item.variante.nombre} (x${item.cantidad})`;
+          }
+          return `Producto eliminado (x${item.cantidad})`;
+        })
         .join(' | ')
         .replace(/"/g, '""');
       
