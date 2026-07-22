@@ -16,6 +16,7 @@ import {
   Calendar,
   Users,
 } from 'lucide-react';
+import ClienteFormModal from '@/components/ClienteFormModal';
 
 interface Cliente {
   id: string;
@@ -67,16 +68,8 @@ export default function ClientesCRM() {
   const [showHistoryModal, setShowHistoryModal] = useState(false);
   const [zoomImage, setZoomImage] = useState<string | null>(null);
   
-  // Formularios
+  // Selección de cliente para editar o ver historial
   const [selectedCliente, setSelectedCliente] = useState<Cliente | null>(null);
-  const [nombre, setNombre] = useState('');
-  const [telefono, setTelefono] = useState('');
-  const [email, setEmail] = useState('');
-  const [notas, setNotas] = useState('');
-  const [imagen, setImagen] = useState<string | null>(null);
-  const [submitting, setSubmitting] = useState(false);
-  const fileInputRef = React.useRef<HTMLInputElement>(null);
-  const [formError, setFormError] = useState<string | null>(null);
   
   // Historial
   const [clienteDetalle, setClienteDetalle] = useState<ClienteDetalle | null>(null);
@@ -106,23 +99,11 @@ export default function ClientesCRM() {
 
   const handleOpenCreate = () => {
     setSelectedCliente(null);
-    setNombre('');
-    setTelefono('');
-    setEmail('');
-    setNotas('');
-    setImagen(null);
-    setFormError(null);
     setShowFormModal(true);
   };
 
   const handleOpenEdit = (cliente: Cliente) => {
     setSelectedCliente(cliente);
-    setNombre(cliente.nombre);
-    setTelefono(cliente.telefono || '');
-    setEmail(cliente.email || '');
-    setNotas(cliente.notas || '');
-    setImagen(cliente.imagen || null);
-    setFormError(null);
     setShowFormModal(true);
   };
 
@@ -139,70 +120,6 @@ export default function ClientesCRM() {
       console.error('Error loading history:', error);
     } finally {
       setLoadingHistory(false);
-    }
-  };
-
-  const handleImageFile = React.useCallback((file: File) => {
-    if (!file.type.startsWith('image/')) return;
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const img = new Image();
-      img.onload = () => {
-        const canvas = document.createElement('canvas');
-        const size = 1024;
-        canvas.width = size;
-        canvas.height = size;
-        const ctx = canvas.getContext('2d')!;
-        const minSide = Math.min(img.width, img.height);
-        const sx = (img.width - minSide) / 2;
-        const sy = (img.height - minSide) / 2;
-        ctx.drawImage(img, sx, sy, minSide, minSide, 0, 0, size, size);
-        const base64 = canvas.toDataURL('image/webp', 0.85);
-        setImagen(base64);
-      };
-      img.src = e.target?.result as string;
-    };
-    reader.readAsDataURL(file);
-  }, []);
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!nombre.trim()) return;
-
-    setSubmitting(true);
-    setFormError(null);
-
-    const payload = {
-      nombre,
-      telefono: telefono || null,
-      email: email || null,
-      notas: notas || null,
-      imagen: imagen || null,
-    };
-
-    try {
-      const url = selectedCliente ? `/api/clientes/${selectedCliente.id}` : '/api/clientes';
-      const method = selectedCliente ? 'PUT' : 'POST';
-
-      const res = await fetch(url, {
-        method,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-
-      const data = await res.json();
-
-      if (res.ok) {
-        setShowFormModal(false);
-        fetchClientes();
-      } else {
-        setFormError(data.error || 'Error al guardar el cliente.');
-      }
-    } catch (error) {
-      setFormError('Ocurrió un error inesperado.');
-      console.error(error);
-    } finally {
-      setSubmitting(false);
     }
   };
 
@@ -336,130 +253,14 @@ export default function ClientesCRM() {
         </div>
       )}
 
-      {/* Modal de Crear / Editar Cliente */}
-      {showFormModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-xl rounded-2xl border border-white/10 bg-[#12121a] p-6 shadow-2xl">
-            <div className="flex items-center justify-between border-b border-white/5 pb-4">
-              <h3 className="text-lg font-bold text-white">
-                {selectedCliente ? (isAdmin ? 'Editar Cliente' : 'Detalles del Cliente') : 'Nuevo Cliente'}
-              </h3>
-              <button
-                onClick={() => setShowFormModal(false)}
-                className="rounded-lg p-1.5 text-zinc-400 hover:bg-white/5 hover:text-white transition"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-
-            <form onSubmit={handleSubmit} className="mt-4 space-y-4">
-              {formError && (
-                <div className="rounded-lg border border-red-500/20 bg-red-500/10 p-3 text-sm text-red-400">
-                  {formError}
-                </div>
-              )}
-
-              <div className="flex gap-4 items-start">
-                <div className="shrink-0">
-                  <label className="block text-xs font-semibold uppercase tracking-wider text-zinc-400 mb-2">Foto</label>
-                  <div className="relative group">
-                    <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={(e) => {
-                      if (e.target.files?.[0]) handleImageFile(e.target.files[0]);
-                    }} />
-                    {imagen ? (
-                      <div className="relative">
-                        <img 
-                          src={imagen} 
-                          alt="Preview" 
-                          className="h-20 w-20 rounded-xl object-cover border border-violet-500/40 shadow-lg cursor-pointer hover:opacity-80 transition" 
-                          onClick={() => setZoomImage(imagen)} 
-                        />
-                        {isAdmin && (
-                          <button type="button" onClick={() => setImagen(null)} className="absolute -top-1.5 -right-1.5 h-5 w-5 rounded-full bg-rose-600 flex items-center justify-center">
-                            <X className="h-3 w-3 text-white" />
-                          </button>
-                        )}
-                      </div>
-                    ) : isAdmin ? (
-                      <button type="button" onClick={() => fileInputRef.current?.click()} className="h-20 w-20 rounded-xl border-2 border-dashed border-white/10 bg-white/[0.02] flex flex-col items-center justify-center gap-1 hover:border-violet-500/50">
-                        <div className="text-[9px] text-zinc-600 font-semibold mt-1">Subir</div>
-                      </button>
-                    ) : (
-                      <div className="h-20 w-20 rounded-xl border border-white/10 bg-white/[0.02] flex flex-col items-center justify-center">
-                        <span className="text-[9px] text-zinc-600 font-semibold text-center leading-tight">Sin<br/>Foto</span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                <div className="flex-1">
-                  <label className="block text-xs font-semibold uppercase tracking-wider text-zinc-400">Nombre Completo</label>
-                  <input
-                    type="text" required value={nombre} onChange={(e) => setNombre(e.target.value)}
-                    className="mt-2 w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-2.5 text-sm text-white placeholder-zinc-600 outline-none focus:border-violet-500 disabled:opacity-70"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-zinc-400">
-                  Teléfono
-                </label>
-                <input
-                  type="text"
-                  value={telefono}
-                  onChange={(e) => setTelefono(e.target.value)}
-                  placeholder="+54 11 1234 5678"
-                  className="mt-2 w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-2.5 text-sm text-white placeholder-zinc-600 outline-none transition focus:border-violet-500 focus:bg-white/[0.08]"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-zinc-400">
-                  Email
-                </label>
-                <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="juan@ejemplo.com"
-                  className="mt-2 w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-2.5 text-sm text-white placeholder-zinc-600 outline-none transition focus:border-violet-500 focus:bg-white/[0.08]"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-zinc-400">
-                  Notas / Observaciones
-                </label>
-                <textarea
-                  value={notas}
-                  onChange={(e) => setNotas(e.target.value)}
-                  placeholder="Detalles sobre talles, preferencias, etc..."
-                  rows={3}
-                  className="mt-2 w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-2.5 text-sm text-white placeholder-zinc-600 outline-none transition focus:border-violet-500 focus:bg-white/[0.08] resize-none"
-                />
-              </div>
-
-              <div className="flex justify-end gap-3 border-t border-white/5 pt-4">
-                <button
-                  type="button"
-                  onClick={() => setShowFormModal(false)}
-                  className="rounded-xl border border-white/10 bg-transparent px-4 py-2.5 text-sm font-semibold text-zinc-400 hover:bg-white/5 hover:text-white transition duration-200"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  disabled={submitting}
-                  className="rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 px-5 py-2.5 text-sm font-semibold text-white shadow-lg transition hover:from-violet-500 hover:to-indigo-500 active:scale-[0.98] disabled:opacity-55"
-                >
-                  {submitting ? 'Guardando...' : 'Guardar'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      {/* Modal de Crear / Editar Cliente Unificado */}
+      <ClienteFormModal
+        isOpen={showFormModal}
+        onClose={() => setShowFormModal(false)}
+        onSuccess={() => fetchClientes()}
+        clienteToEdit={selectedCliente}
+        isAdmin={isAdmin}
+      />
 
       {/* Modal de Historial de Compras */}
       {showHistoryModal && (

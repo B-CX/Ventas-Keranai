@@ -16,6 +16,7 @@ import {
   ChevronRight,
   Package,
 } from 'lucide-react';
+import ClienteFormModal from '@/components/ClienteFormModal';
 
 interface Variante {
   id: string;
@@ -63,6 +64,7 @@ interface Cliente {
 
 export default function NuevaVentaPage() {
   const { data: session } = useSession();
+  const isAdmin = (session?.user as any)?.role === 'ADMIN';
 
   // Búsqueda de Productos
   const [productSearch, setProductSearch] = useState('');
@@ -113,14 +115,6 @@ export default function NuevaVentaPage() {
   const [selectedCliente, setSelectedCliente] = useState<Cliente | null>(null);
   const [searchingClientes, setSearchingClientes] = useState(false);
   const [showAddClientModal, setShowAddClientModal] = useState(false);
-
-  // Formulario Nuevo Cliente
-  const [newClientNombre, setNewClientNombre] = useState('');
-  const [newClientTelefono, setNewClientTelefono] = useState('');
-  const [newClientEmail, setNewClientEmail] = useState('');
-  const [newClientNotas, setNewClientNotas] = useState('');
-  const [savingClient, setSavingClient] = useState(false);
-  const [newClientError, setNewClientError] = useState<string | null>(null);
 
   // Estado de envío
   const [submittingVenta, setSubmittingVenta] = useState(false);
@@ -287,47 +281,6 @@ export default function NuevaVentaPage() {
 
   const handleRemoveItem = (varianteId: string) => {
     setCart(cart.filter((i) => i.varianteId !== varianteId));
-  };
-
-  // Crear Cliente
-  const handleCreateClient = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newClientNombre.trim()) return;
-
-    setSavingClient(true);
-    setNewClientError(null);
-
-    const payload = {
-      nombre: newClientNombre,
-      telefono: newClientTelefono || null,
-      email: newClientEmail || null,
-      notas: newClientNotas || null,
-    };
-
-    try {
-      const res = await fetch('/api/clientes', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-
-      const data = await res.json();
-      if (res.ok) {
-        setSelectedCliente(data);
-        setShowAddClientModal(false);
-        setNewClientNombre('');
-        setNewClientTelefono('');
-        setNewClientEmail('');
-        setNewClientNotas('');
-      } else {
-        setNewClientError(data.error || 'Error al crear el cliente.');
-      }
-    } catch (err) {
-      setNewClientError('Ocurrió un error inesperado.');
-      console.error(err);
-    } finally {
-      setSavingClient(false);
-    }
   };
 
   // Confirmar Venta
@@ -737,100 +690,15 @@ export default function NuevaVentaPage() {
         </div>
       </div>
 
-      {/* Modal Agregar Cliente */}
-      {showAddClientModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-md rounded-2xl border border-white/10 bg-[#12121a] p-6 shadow-2xl">
-            <div className="flex items-center justify-between border-b border-white/5 pb-4">
-              <h3 className="text-lg font-bold text-white">Nuevo Cliente</h3>
-              <button
-                onClick={() => setShowAddClientModal(false)}
-                className="rounded-lg p-1.5 text-zinc-400 hover:bg-white/5 hover:text-white transition"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-
-            <form onSubmit={handleCreateClient} className="mt-4 space-y-4">
-              {newClientError && (
-                <div className="rounded-lg border border-red-500/20 bg-red-500/10 p-3 text-sm text-red-400">
-                  {newClientError}
-                </div>
-              )}
-
-              <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-zinc-400">
-                  Nombre Completo
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={newClientNombre}
-                  onChange={(e) => setNewClientNombre(e.target.value)}
-                  placeholder="Juan Pérez"
-                  className="mt-2 w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-2.5 text-sm text-white outline-none focus:border-violet-500"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-zinc-400">
-                  Teléfono
-                </label>
-                <input
-                  type="text"
-                  value={newClientTelefono}
-                  onChange={(e) => setNewClientTelefono(e.target.value)}
-                  placeholder="+54 11 1234 5678"
-                  className="mt-2 w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-2.5 text-sm text-white outline-none focus:border-violet-500"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-zinc-400">
-                  Email
-                </label>
-                <input
-                  type="email"
-                  value={newClientEmail}
-                  onChange={(e) => setNewClientEmail(e.target.value)}
-                  placeholder="juan@ejemplo.com"
-                  className="mt-2 w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-2.5 text-sm text-white outline-none focus:border-violet-500"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-zinc-400">
-                  Notas
-                </label>
-                <textarea
-                  value={newClientNotas}
-                  onChange={(e) => setNewClientNotas(e.target.value)}
-                  placeholder="Talle de remera, preferencias..."
-                  rows={2}
-                  className="mt-2 w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 py-2.5 text-sm text-white outline-none focus:border-violet-500 resize-none"
-                />
-              </div>
-
-              <div className="flex justify-end gap-3 border-t border-white/5 pt-4">
-                <button
-                  type="button"
-                  onClick={() => setShowAddClientModal(false)}
-                  className="rounded-xl border border-white/10 bg-transparent px-4 py-2.5 text-sm font-semibold text-zinc-400 hover:bg-white/5 hover:text-white transition duration-200"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  disabled={savingClient}
-                  className="rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 px-5 py-2.5 text-sm font-semibold text-white shadow-lg transition hover:from-violet-500 hover:to-indigo-500 active:scale-[0.98] disabled:opacity-55"
-                >
-                  {savingClient ? 'Guardando...' : 'Crear'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      {/* Modal Agregar Cliente Unificado */}
+      <ClienteFormModal
+        isOpen={showAddClientModal}
+        onClose={() => setShowAddClientModal(false)}
+        onSuccess={(nuevoCliente) => {
+          setSelectedCliente(nuevoCliente);
+        }}
+        isAdmin={isAdmin}
+      />
 
       {/* Modal Éxito Venta */}
       {showSuccessModal && (

@@ -78,3 +78,11 @@ Sigue estrictamente este flujo para evadir el bloqueo:
 ## Estándar de Código: Next.js App Router y NextAuth
 - **Antipatrón Crítico:** Llamar a `await auth();` dentro de un bloque `try / catch` en un API Route (`route.ts`). NextAuth lanza un `DynamicServerError` que, si es atrapado, hace que Next.js compile la ruta de forma estática como un error 500. Esto rompe la app en Producción.
 - **Solución Obligatoria:** Todos los archivos `route.ts` que usen datos dinámicos, bases de datos o `auth()`, DEBEN incluir la directiva `export const dynamic = 'force-dynamic';` al inicio del archivo.
+
+## Flujo de Trabajo: Configuración DNS en Hostinger (MCP)
+- **Restricción de tipo CNAME (Error DNS:4005):** En la zona DNS de Hostinger, un registro de tipo `CNAME` para un subdominio (ej. `productos`) no puede coexistir con registros de tipo `A` o `AAAA` para el mismo nombre.
+- **Protocolo de Actualización mediante MCP:**
+  1. Verificar los registros existentes llamando a `DNS_getDNSRecordsV1`.
+  2. Si existen registros conflictivos (`A` o `AAAA`), eliminarlos primero invocando `DNS_deleteDNSRecordsV1` especificando el parámetro `filters: [{ name: "<subdominio>", type: "A" }, { name: "<subdominio>", type: "AAAA" }]`.
+  3. Agregar el registro `CNAME` invocando `DNS_updateDNSRecordsV1` con `overwrite: false`.
+
