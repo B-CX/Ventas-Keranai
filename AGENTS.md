@@ -24,17 +24,13 @@ This version has breaking changes — APIs, conventions, and file structure may 
      `robocopy "C:\Users\bcand\ventas-app\ventas-interno" "G:\Mi unidad\antigravity app proyecto\ventas-interno" /MIR /XD node_modules .next .git`
   4. Esto asegura que la próxima vez que el usuario ejecute `INICIAR.bat`, no se sobrescriban los cambios más recientes con versiones viejas.
 
-## Flujo de Trabajo: Despliegue Seguro a Hostinger (hPanel)
-Cuando el usuario pida "desplegar", "actualizar en Hostinger", o arreglar bugs de producción en Hostinger, NO subas archivos `.env.production` directamente en un `.zip` ni hagas commit de credenciales a GitHub (el repo es público). El sistema de Hostinger bloqueará la compilación si encuentra contraseñas comprimidas.
-Sigue estrictamente este flujo para evadir el bloqueo:
-0. CRÍTICO: Pídele siempre al usuario las variables de entorno configuradas en Vercel (ej. `AUTH_GOOGLE_ID`, `NEXTAUTH_SECRET`, APIs externas) o lee el `.env` local para garantizar que incluyas absolutamente TODAS las credenciales.
-1. Crea un script temporal local `create-env.js` que utilice `fs.writeFileSync` para generar el archivo `.env.production` y `.env` con las variables y contraseñas necesarias.
-2. Modifica temporalmente el `package.json` agregando `node create-env.js && ` al inicio del script `postinstall`.
-3. Crea un archivo ZIP llamado `hostinger-deploy-auto.zip` usando `git archive` que contenga estas modificaciones temporales, por ejemplo:
-   `git add -f create-env.js package.json && git commit -m "temp" && git archive -o hostinger-deploy-auto.zip HEAD && git reset HEAD~1 && git restore package.json`
-4. Usa la herramienta MCP `hosting_deployJsApplication` para desplegar el `hostinger-deploy-auto.zip`. 
-5. Elimina los archivos temporales (`create-env.js` y el `.zip`).
-6. Monitorea el estado de compilación usando `hosting_listJsDeployments`. Hostinger ejecutará el script `postinstall`, generando las contraseñas internamente y completando el despliegue de forma exitosa y segura.
+## Flujo de Trabajo: Despliegue a Hostinger (hPanel)
+Cuando el usuario pida "desplegar" o "actualizar en Hostinger", la aplicación debe subirse sin archivos de entorno locales.
+1. Recuérdale al usuario que debe asegurarse de tener todas sus variables de entorno configuradas directamente en el panel de control de Hostinger.
+2. Crea un archivo ZIP limpio a partir del último commit: `git archive -o hostinger-deploy-auto.zip HEAD`. (NO incluyas archivos `.env` ni scripts con credenciales como `create-env.js`, ya que Hostinger bloqueará el despliegue por motivos de seguridad).
+3. Usa la herramienta MCP `hosting_deployJsApplication` para desplegar el `hostinger-deploy-auto.zip`.
+4. Monitorea el estado usando `hosting_listJsDeployments`.
+5. Finalmente, elimina el archivo temporal `hostinger-deploy-auto.zip`.
 
 ## Flujo de Trabajo: Actualizaciones de Prisma (EPERM Error)
 - **Problema de bloqueo en Windows:** Si necesitas actualizar el esquema de Prisma (`schema.prisma`), **NUNCA** corras `npx prisma generate` si el servidor de Next.js (`npm run dev`) está en ejecución. Windows bloqueará el archivo `.node` lanzando un error `EPERM`.
